@@ -78,13 +78,13 @@ class LLMReranker:
         model = AutoModelForCausalLM.from_pretrained(
             self.model_path,
             torch_dtype=self.torch_dtype if use_cuda else torch.float32,
-            quantization_config=quant_config,
-            device_map="auto" if use_cuda else None,
+            #quantization_config=quant_config,
             attn_implementation="flash_attention_2" if use_cuda else None,
             trust_remote_code=True,
+            device_map="auto"
         )
         if self.adapter_path:
-            model = PeftModel.from_pretrained(model, self.adapter_path)
+            model = PeftModel.from_pretrained(model, self.adapter_path, device_map="auto")
         model.eval()
         return model
 

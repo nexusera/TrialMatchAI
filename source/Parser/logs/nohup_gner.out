@@ -3607,3 +3607,864 @@ OSError: [Errno 98] Address already in use
 2025-10-04 12:43:08,048 - INFO - Received data: {"biomedner_home": "/nfs/scratch/mabdallah/TrialMatchAI/source/Parser", "inputfile": "b29289e71b2cb5235f2a632c3d898362e27afe1519f6e99c6b1f76ef.PubTator"}
 2025-10-04 12:43:16,100 - INFO - Connection accepted from ('127.0.0.1', 46382)
 2025-10-04 12:43:16,101 - INFO - Received data: {"biomedner_home": "/nfs/scratch/mabdallah/TrialMatchAI/source/Parser", "inputfile": "981bc74e79c14e76efe4e8f05c270a7347b2dbaa05aaee8c2cdbe2d1.PubTator"}
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files:   0%|          | 0/10 [00:13<?, ?it/s]
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/urllib3/connectionpool.py", line 534, in _make_request
+    response = conn.getresponse()
+               ^^^^^^^^^^^^^^^^^^
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/urllib3/connection.py", line 571, in getresponse
+    httplib_response = super().getresponse()
+                       ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ocean/.local/share/uv/python/cpython-3.11.13-linux-x86_64-gnu/lib/python3.11/http/client.py", line 1395, in getresponse
+    response.begin()
+  File "/home/ocean/.local/share/uv/python/cpython-3.11.13-linux-x86_64-gnu/lib/python3.11/http/client.py", line 325, in begin
+    version, status, reason = self._read_status()
+                              ^^^^^^^^^^^^^^^^^^^
+  File "/home/ocean/.local/share/uv/python/cpython-3.11.13-linux-x86_64-gnu/lib/python3.11/http/client.py", line 286, in _read_status
+    line = str(self.fp.readline(_MAXLINE + 1), "iso-8859-1")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ocean/.local/share/uv/python/cpython-3.11.13-linux-x86_64-gnu/lib/python3.11/socket.py", line 718, in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ocean/.local/share/uv/python/cpython-3.11.13-linux-x86_64-gnu/lib/python3.11/ssl.py", line 1314, in recv_into
+    return self.read(nbytes, buffer)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ocean/.local/share/uv/python/cpython-3.11.13-linux-x86_64-gnu/lib/python3.11/ssl.py", line 1166, in read
+    return self._sslobj.read(len, buffer)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TimeoutError: The read operation timed out
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/requests/adapters.py", line 645, in send
+    resp = conn.urlopen(
+           ^^^^^^^^^^^^^
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/urllib3/connectionpool.py", line 841, in urlopen
+    retries = retries.increment(
+              ^^^^^^^^^^^^^^^^^^
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/urllib3/util/retry.py", line 490, in increment
+    raise reraise(type(error), error, _stacktrace)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/urllib3/util/util.py", line 39, in reraise
+    raise value
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/urllib3/connectionpool.py", line 787, in urlopen
+    response = self._make_request(
+               ^^^^^^^^^^^^^^^^^^^
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/urllib3/connectionpool.py", line 536, in _make_request
+    self._raise_timeout(err=e, url=url, timeout_value=read_timeout)
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/urllib3/connectionpool.py", line 367, in _raise_timeout
+    raise ReadTimeoutError(
+urllib3.exceptions.ReadTimeoutError: HTTPSConnectionPool(host='huggingface.co', port=443): Read timed out. (read timeout=10)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/huggingface_hub/file_download.py", line 1546, in _get_metadata_or_catch_error
+    metadata = get_hf_file_metadata(
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/huggingface_hub/utils/_validators.py", line 114, in _inner_fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/huggingface_hub/file_download.py", line 1463, in get_hf_file_metadata
+    r = _request_wrapper(
+        ^^^^^^^^^^^^^^^^^
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/huggingface_hub/file_download.py", line 286, in _request_wrapper
+    response = _request_wrapper(
+               ^^^^^^^^^^^^^^^^^
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/huggingface_hub/file_download.py", line 309, in _request_wrapper
+    response = http_backoff(method=method, url=url, **params, retry_on_exceptions=(), retry_on_status_codes=(429,))
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/huggingface_hub/utils/_http.py", line 310, in http_backoff
+    response = session.request(method=method, url=url, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/requests/sessions.py", line 592, in request
+    resp = self.send(prep, **send_kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/requests/sessions.py", line 706, in send
+    r = adapter.send(request, **kwargs)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/huggingface_hub/utils/_http.py", line 96, in send
+    return super().send(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/requests/adapters.py", line 691, in send
+    raise ReadTimeout(e, request=request)
+requests.exceptions.ReadTimeout: (ReadTimeoutError("HTTPSConnectionPool(host='huggingface.co', port=443): Read timed out. (read timeout=10)"), '(Request ID: e0b7efef-6b72-4f94-bb47-e1cfdec9e704)')
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 205, in <module>
+    mt_ner = GNER(args)
+             ^^^^^^^^^^
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 66, in __init__
+    self.model = GLiNER.from_pretrained(
+                 ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/huggingface_hub/utils/_validators.py", line 114, in _inner_fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/huggingface_hub/hub_mixin.py", line 566, in from_pretrained
+    instance = cls._from_pretrained(
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/gliner/model.py", line 765, in _from_pretrained
+    model_dir = snapshot_download(
+                ^^^^^^^^^^^^^^^^^^
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/huggingface_hub/utils/_validators.py", line 114, in _inner_fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/huggingface_hub/_snapshot_download.py", line 332, in snapshot_download
+    thread_map(
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/tqdm/contrib/concurrent.py", line 69, in thread_map
+    return _executor_map(ThreadPoolExecutor, fn, *iterables, **tqdm_kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/tqdm/contrib/concurrent.py", line 51, in _executor_map
+    return list(tqdm_class(ex.map(fn, *iterables, chunksize=chunksize), **kwargs))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/tqdm/std.py", line 1181, in __iter__
+    for obj in iterable:
+  File "/home/ocean/.local/share/uv/python/cpython-3.11.13-linux-x86_64-gnu/lib/python3.11/concurrent/futures/_base.py", line 619, in result_iterator
+    yield _result_or_cancel(fs.pop())
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ocean/.local/share/uv/python/cpython-3.11.13-linux-x86_64-gnu/lib/python3.11/concurrent/futures/_base.py", line 317, in _result_or_cancel
+    return fut.result(timeout)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home/ocean/.local/share/uv/python/cpython-3.11.13-linux-x86_64-gnu/lib/python3.11/concurrent/futures/_base.py", line 456, in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home/ocean/.local/share/uv/python/cpython-3.11.13-linux-x86_64-gnu/lib/python3.11/concurrent/futures/_base.py", line 401, in __get_result
+    raise self._exception
+  File "/home/ocean/.local/share/uv/python/cpython-3.11.13-linux-x86_64-gnu/lib/python3.11/concurrent/futures/thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/huggingface_hub/_snapshot_download.py", line 306, in _inner_hf_hub_download
+    return hf_hub_download(
+           ^^^^^^^^^^^^^^^^
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/huggingface_hub/utils/_validators.py", line 114, in _inner_fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/huggingface_hub/file_download.py", line 1010, in hf_hub_download
+    return _hf_hub_download_to_cache_dir(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/huggingface_hub/file_download.py", line 1117, in _hf_hub_download_to_cache_dir
+    _raise_on_head_call_error(head_call_error, force_download, local_files_only)
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/huggingface_hub/file_download.py", line 1661, in _raise_on_head_call_error
+    raise LocalEntryNotFoundError(
+huggingface_hub.errors.LocalEntryNotFoundError: An error happened while trying to locate the file on the Hub and we cannot find the requested files in the local cache. Please check your connection and try again or make sure your Internet connection is on.
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/urllib3/connectionpool.py", line 464, in _make_request
+    self._validate_conn(conn)
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/urllib3/connectionpool.py", line 1093, in _validate_conn
+    conn.connect()
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/urllib3/connection.py", line 796, in connect
+    sock_and_verified = _ssl_wrap_socket_and_match_hostname(
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/urllib3/connection.py", line 975, in _ssl_wrap_socket_and_match_hostname
+    ssl_sock = ssl_wrap_socket(
+               ^^^^^^^^^^^^^^^^
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/urllib3/util/ssl_.py", line 483, in ssl_wrap_socket
+    ssl_sock = _ssl_wrap_socket_impl(sock, context, tls_in_tls, server_hostname)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/urllib3/util/ssl_.py", line 527, in _ssl_wrap_socket_impl
+    return ssl_context.wrap_socket(sock, server_hostname=server_hostname)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ocean/.local/share/uv/python/cpython-3.11.13-linux-x86_64-gnu/lib/python3.11/ssl.py", line 517, in wrap_socket
+    return self.sslsocket_class._create(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ocean/.local/share/uv/python/cpython-3.11.13-linux-x86_64-gnu/lib/python3.11/ssl.py", line 1104, in _create
+    self.do_handshake()
+  File "/home/ocean/.local/share/uv/python/cpython-3.11.13-linux-x86_64-gnu/lib/python3.11/ssl.py", line 1382, in do_handshake
+    self._sslobj.do_handshake()
+TimeoutError: _ssl.c:999: The handshake operation timed out
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/requests/adapters.py", line 645, in send
+    resp = conn.urlopen(
+           ^^^^^^^^^^^^^
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/urllib3/connectionpool.py", line 841, in urlopen
+    retries = retries.increment(
+              ^^^^^^^^^^^^^^^^^^
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/urllib3/util/retry.py", line 490, in increment
+    raise reraise(type(error), error, _stacktrace)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/urllib3/util/util.py", line 39, in reraise
+    raise value
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/urllib3/connectionpool.py", line 787, in urlopen
+    response = self._make_request(
+               ^^^^^^^^^^^^^^^^^^^
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/urllib3/connectionpool.py", line 488, in _make_request
+    raise new_e
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/urllib3/connectionpool.py", line 466, in _make_request
+    self._raise_timeout(err=e, url=url, timeout_value=conn.timeout)
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/urllib3/connectionpool.py", line 367, in _raise_timeout
+    raise ReadTimeoutError(
+urllib3.exceptions.ReadTimeoutError: HTTPSConnectionPool(host='huggingface.co', port=443): Read timed out. (read timeout=10)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/huggingface_hub/file_download.py", line 1546, in _get_metadata_or_catch_error
+    metadata = get_hf_file_metadata(
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/huggingface_hub/utils/_validators.py", line 114, in _inner_fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/huggingface_hub/file_download.py", line 1463, in get_hf_file_metadata
+    r = _request_wrapper(
+        ^^^^^^^^^^^^^^^^^
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/huggingface_hub/file_download.py", line 286, in _request_wrapper
+    response = _request_wrapper(
+               ^^^^^^^^^^^^^^^^^
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/huggingface_hub/file_download.py", line 309, in _request_wrapper
+    response = http_backoff(method=method, url=url, **params, retry_on_exceptions=(), retry_on_status_codes=(429,))
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/huggingface_hub/utils/_http.py", line 310, in http_backoff
+    response = session.request(method=method, url=url, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/requests/sessions.py", line 592, in request
+    resp = self.send(prep, **send_kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/requests/sessions.py", line 706, in send
+    r = adapter.send(request, **kwargs)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/huggingface_hub/utils/_http.py", line 96, in send
+    return super().send(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/requests/adapters.py", line 691, in send
+    raise ReadTimeout(e, request=request)
+requests.exceptions.ReadTimeout: (ReadTimeoutError("HTTPSConnectionPool(host='huggingface.co', port=443): Read timed out. (read timeout=10)"), '(Request ID: 3ab09fd2-fdec-43c4-931a-fee61e114308)')
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/transformers/utils/hub.py", line 479, in cached_files
+    hf_hub_download(
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/huggingface_hub/utils/_validators.py", line 114, in _inner_fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/huggingface_hub/file_download.py", line 1010, in hf_hub_download
+    return _hf_hub_download_to_cache_dir(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/huggingface_hub/file_download.py", line 1117, in _hf_hub_download_to_cache_dir
+    _raise_on_head_call_error(head_call_error, force_download, local_files_only)
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/huggingface_hub/file_download.py", line 1661, in _raise_on_head_call_error
+    raise LocalEntryNotFoundError(
+huggingface_hub.errors.LocalEntryNotFoundError: An error happened while trying to locate the file on the Hub and we cannot find the requested files in the local cache. Please check your connection and try again or make sure your Internet connection is on.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 205, in <module>
+    mt_ner = GNER(args)
+             ^^^^^^^^^^
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 66, in __init__
+    self.model = GLiNER.from_pretrained(
+                 ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/huggingface_hub/utils/_validators.py", line 114, in _inner_fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/huggingface_hub/hub_mixin.py", line 566, in from_pretrained
+    instance = cls._from_pretrained(
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/gliner/model.py", line 804, in _from_pretrained
+    gliner = cls(config, tokenizer=tokenizer, encoder_from_pretrained=False)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/gliner/model.py", line 75, in __init__
+    self.model = SpanModel(config, encoder_from_pretrained)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/gliner/modeling/base.py", line 206, in __init__
+    super(SpanModel, self).__init__(config, encoder_from_pretrained)
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/gliner/modeling/base.py", line 85, in __init__
+    self.token_rep_layer = Encoder(config, from_pretrained)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/gliner/modeling/encoder.py", line 113, in __init__
+    self.bert_layer = Transformer( #transformer_model
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/gliner/modeling/encoder.py", line 42, in __init__
+    encoder_config = AutoConfig.from_pretrained(model_name)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/transformers/models/auto/configuration_auto.py", line 1250, in from_pretrained
+    config_dict, unused_kwargs = PretrainedConfig.get_config_dict(pretrained_model_name_or_path, **kwargs)
+                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/transformers/configuration_utils.py", line 649, in get_config_dict
+    config_dict, kwargs = cls._get_config_dict(pretrained_model_name_or_path, **kwargs)
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/transformers/configuration_utils.py", line 708, in _get_config_dict
+    resolved_config_file = cached_file(
+                           ^^^^^^^^^^^^
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/transformers/utils/hub.py", line 321, in cached_file
+    file = cached_files(path_or_repo_id=path_or_repo_id, filenames=[filename], **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ocean/azheng/TrialMatchAI/.venv/lib/python3.11/site-packages/transformers/utils/hub.py", line 553, in cached_files
+    raise OSError(
+OSError: We couldn't connect to 'https://huggingface.co' to load the files, and couldn't find them in the cached files.
+Check your internet connection or see how to run the library in offline mode at 'https://huggingface.co/docs/transformers/installation#offline-mode'.
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files:  10%|█         | 1/10 [00:01<00:09,  1.08s/it]Fetching 10 files:  60%|██████    | 6/10 [01:09<00:48, 12.18s/it]Fetching 10 files: 100%|██████████| 10/10 [01:09<00:00,  6.97s/it]
+2026-03-31 08:54:30,777 - INFO - Server started on localhost:18783
+2026-03-31 09:32:18,973 - INFO - Connection accepted from ('127.0.0.1', 38166)
+2026-03-31 09:32:18,973 - ERROR - An error occurred: unpack requires a buffer of 2 bytes
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 111550.64it/s]
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 120180.63it/s]
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+2026-03-31 09:35:45,171 - INFO - Connection accepted from ('127.0.0.1', 56828)
+2026-03-31 09:35:45,172 - ERROR - An error occurred: unpack requires a buffer of 2 bytes
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 124830.48it/s]
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 24686.90it/s]
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+2026-03-31 10:12:41,714 - INFO - Connection accepted from ('127.0.0.1', 58720)
+2026-03-31 10:12:41,714 - ERROR - An error occurred: unpack requires a buffer of 2 bytes
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 25858.84it/s]
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 20982.01it/s]
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+2026-03-31 10:21:26,839 - INFO - Connection accepted from ('127.0.0.1', 55442)
+2026-03-31 10:21:26,840 - ERROR - An error occurred: unpack requires a buffer of 2 bytes
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 97769.32it/s]
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 122282.92it/s]
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+2026-03-31 11:03:46,745 - INFO - Connection accepted from ('127.0.0.1', 33310)
+2026-03-31 11:03:46,745 - ERROR - An error occurred: unpack requires a buffer of 2 bytes
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 90006.52it/s]
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 114286.21it/s]
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+2026-03-31 11:54:54,869 - INFO - Connection accepted from ('127.0.0.1', 40456)
+2026-03-31 11:54:54,869 - ERROR - An error occurred: unpack requires a buffer of 2 bytes
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 74367.09it/s]
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 107546.26it/s]
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+2026-03-31 13:52:25,264 - INFO - Connection accepted from ('127.0.0.1', 52756)
+2026-03-31 13:52:25,265 - ERROR - An error occurred: unpack requires a buffer of 2 bytes
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 115545.56it/s]
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 115545.56it/s]
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+2026-03-31 14:11:32,997 - INFO - Connection accepted from ('127.0.0.1', 37202)
+2026-03-31 14:11:32,998 - ERROR - An error occurred: unpack requires a buffer of 2 bytes
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 129055.51it/s]
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 98922.26it/s]
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+2026-03-31 14:17:33,677 - INFO - Connection accepted from ('127.0.0.1', 52552)
+2026-03-31 14:17:33,677 - ERROR - An error occurred: unpack requires a buffer of 2 bytes
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 116832.98it/s]
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 106997.55it/s]
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+2026-03-31 14:21:37,824 - INFO - Connection accepted from ('127.0.0.1', 56462)
+2026-03-31 14:21:37,824 - ERROR - An error occurred: unpack requires a buffer of 2 bytes
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 113359.57it/s]
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 116832.98it/s]
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+2026-03-31 14:24:44,348 - INFO - Connection accepted from ('127.0.0.1', 53220)
+2026-03-31 14:24:44,349 - ERROR - An error occurred: unpack requires a buffer of 2 bytes
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 97090.37it/s]
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 103819.41it/s]
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+2026-03-31 14:48:20,110 - INFO - Connection accepted from ('127.0.0.1', 39320)
+2026-03-31 14:48:20,110 - ERROR - An error occurred: unpack requires a buffer of 2 bytes
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 119495.84it/s]
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 111550.64it/s]
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+2026-03-31 14:56:01,326 - INFO - Connection accepted from ('127.0.0.1', 58946)
+2026-03-31 14:56:01,326 - ERROR - An error occurred: unpack requires a buffer of 2 bytes
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 106997.55it/s]
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 105649.97it/s]
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+2026-03-31 15:05:09,209 - INFO - Connection accepted from ('127.0.0.1', 45776)
+2026-03-31 15:05:09,209 - ERROR - An error occurred: unpack requires a buffer of 2 bytes
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 58173.43it/s]
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 126716.13it/s]
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+2026-03-31 15:06:06,606 - INFO - Connection accepted from ('127.0.0.1', 34656)
+2026-03-31 15:06:06,606 - ERROR - An error occurred: unpack requires a buffer of 2 bytes
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 122282.92it/s]
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 125203.10it/s]
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+2026-03-31 15:07:46,769 - INFO - Connection accepted from ('127.0.0.1', 52788)
+2026-03-31 15:07:46,769 - INFO - Received data: {"biomedner_home": "/home/ocean/azheng/TrialMatchAI/source/Parser", "inputfile": "e1d060acb750caa2feaaa3631c8fefed61f542044dfe8771d998a352.PubTator"}
+Asking to truncate to max_length but no maximum length is provided and the model has no predefined maximum length. Default to no truncation.
+2026-03-31 15:07:51,041 - INFO - Connection accepted from ('127.0.0.1', 34506)
+2026-03-31 15:07:51,041 - INFO - Received data: {"biomedner_home": "/home/ocean/azheng/TrialMatchAI/source/Parser", "inputfile": "b38e524c4aea3eb4906dc340eb840d6b22f260c18edf9ebf2001afcb.PubTator"}
+2026-03-31 15:12:58,201 - INFO - Connection accepted from ('127.0.0.1', 39444)
+2026-03-31 15:12:58,201 - ERROR - An error occurred: unpack requires a buffer of 2 bytes
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 114598.47it/s]
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 103054.15it/s]
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+2026-03-31 15:14:56,421 - INFO - Connection accepted from ('127.0.0.1', 50256)
+2026-03-31 15:14:56,421 - ERROR - An error occurred: unpack requires a buffer of 2 bytes
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 108942.96it/s]
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 97315.64it/s]
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+2026-03-31 15:33:04,632 - INFO - Connection accepted from ('127.0.0.1', 49216)
+2026-03-31 15:33:04,632 - ERROR - An error occurred: unpack requires a buffer of 2 bytes
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 130663.68it/s]
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 106454.42it/s]
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+2026-03-31 15:34:49,443 - INFO - Connection accepted from ('127.0.0.1', 45592)
+2026-03-31 15:34:49,443 - INFO - Received data: {"biomedner_home": "/home/ocean/azheng/TrialMatchAI/source/Parser", "inputfile": "79e0a301c8ad111b0745a7adcedd0bb0ce04d1764b5f00b79f2624e1.PubTator"}
+2026-03-31 15:34:53,722 - INFO - Connection accepted from ('127.0.0.1', 45604)
+2026-03-31 15:34:53,722 - INFO - Received data: {"biomedner_home": "/home/ocean/azheng/TrialMatchAI/source/Parser", "inputfile": "18203e354d6fbb53c1db742f05ec8da714c39c0f2863d6af3713a847.PubTator"}
+2026-03-31 20:56:16,982 - INFO - Connection accepted from ('127.0.0.1', 50482)
+2026-03-31 20:56:16,983 - ERROR - An error occurred: unpack requires a buffer of 2 bytes
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 134865.08it/s]
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 121574.03it/s]
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+2026-03-31 21:12:51,333 - INFO - Connection accepted from ('127.0.0.1', 56502)
+2026-03-31 21:12:51,334 - ERROR - An error occurred: unpack requires a buffer of 2 bytes
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 109798.53it/s]
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 117487.51it/s]
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+2026-03-31 21:15:25,816 - INFO - Connection accepted from ('127.0.0.1', 34222)
+2026-03-31 21:15:25,816 - ERROR - An error occurred: unpack requires a buffer of 2 bytes
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 124830.48it/s]
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 112750.11it/s]
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+2026-03-31 21:36:14,276 - INFO - Connection accepted from ('127.0.0.1', 42388)
+2026-03-31 21:36:14,277 - ERROR - An error occurred: unpack requires a buffer of 2 bytes
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 118483.16it/s]
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 108100.62it/s]
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+2026-03-31 21:39:02,350 - INFO - Connection accepted from ('127.0.0.1', 55720)
+2026-03-31 21:39:02,350 - INFO - Received data: {"biomedner_home": "/home/ocean/azheng/TrialMatchAI/source/Parser", "inputfile": "9635ff1853e694fbcaec87be2344519d99037d4a116fdd7669fa18f1.PubTator"}
+2026-03-31 21:39:06,562 - INFO - Connection accepted from ('127.0.0.1', 55730)
+2026-03-31 21:39:06,562 - INFO - Received data: {"biomedner_home": "/home/ocean/azheng/TrialMatchAI/source/Parser", "inputfile": "18a0bc4cd7c162001015c07df67fb0a76fce270ed0ada9083abd0e23.PubTator"}
+2026-04-01 08:56:00,257 - INFO - Connection accepted from ('127.0.0.1', 52980)
+2026-04-01 08:56:00,258 - ERROR - An error occurred: unpack requires a buffer of 2 bytes
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 100102.72it/s]
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 125203.10it/s]
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+2026-04-01 11:02:43,153 - INFO - Connection accepted from ('127.0.0.1', 48762)
+2026-04-01 11:02:43,154 - ERROR - An error occurred: unpack requires a buffer of 2 bytes
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 121927.44it/s]
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 117817.53it/s]
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+2026-04-01 11:05:00,884 - INFO - Connection accepted from ('127.0.0.1', 36184)
+2026-04-01 11:05:00,884 - INFO - Received data: {"biomedner_home": "/home/ocean/azheng/TrialMatchAI/source/Parser", "inputfile": "911133fc38c178c587e854b723e114743127a1bc304dc50bb5f18c79.PubTator"}
+2026-04-01 11:05:05,226 - INFO - Connection accepted from ('127.0.0.1', 36188)
+2026-04-01 11:05:05,226 - INFO - Received data: {"biomedner_home": "/home/ocean/azheng/TrialMatchAI/source/Parser", "inputfile": "3ff623d457bcd567d9e317927060c4da884f8afe9b1c83508481b186.PubTator"}
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 19627.07it/s]
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 20242.78it/s]
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 56603.29it/s]
+2026-04-01 11:13:42,311 - INFO - Server started on localhost:18783
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 24759.76it/s]
+2026-04-01 11:18:44,078 - INFO - Server started on localhost:18783
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 106454.42it/s]
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 104857.60it/s]
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+2026-04-01 11:20:51,504 - INFO - Connection accepted from ('127.0.0.1', 50960)
+2026-04-01 11:20:51,505 - INFO - Received data: {"biomedner_home": "/home/ocean/azheng/TrialMatchAI/source/Parser", "inputfile": "f202312e7fe8c78ae659635618f408c154973c887d24a19c15844c26.PubTator"}
+Asking to truncate to max_length but no maximum length is provided and the model has no predefined maximum length. Default to no truncation.
+2026-04-01 11:20:56,110 - INFO - Connection accepted from ('127.0.0.1', 50966)
+2026-04-01 11:20:56,110 - INFO - Received data: {"biomedner_home": "/home/ocean/azheng/TrialMatchAI/source/Parser", "inputfile": "ff68b5941a69bc36325b531cfb5e8ac400a7b0c1ed2388cd45f49740.PubTator"}
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 114912.44it/s]
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 98227.26it/s]
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+2026-04-01 13:36:04,284 - INFO - Connection accepted from ('127.0.0.1', 41108)
+2026-04-01 13:36:04,284 - INFO - Received data: {"biomedner_home": "/home/ocean/azheng/TrialMatchAI/source/Parser", "inputfile": "03c3704f75ab704a66609e40d84e2e2def6393022bedec1906e6cb6b.PubTator"}
+2026-04-01 13:36:07,000 - INFO - Connection accepted from ('127.0.0.1', 60290)
+2026-04-01 13:36:07,001 - INFO - Received data: {"biomedner_home": "/home/ocean/azheng/TrialMatchAI/source/Parser", "inputfile": "755af203ebcc8de6ed2236efe7f7046a2b9ddcbfa529d7f6d4729119.PubTator"}
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 104857.60it/s]
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 113054.02it/s]
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+2026-04-01 13:54:37,687 - INFO - Connection accepted from ('127.0.0.1', 55320)
+2026-04-01 13:54:37,687 - INFO - Received data: {"biomedner_home": "/home/ocean/azheng/TrialMatchAI/source/Parser", "inputfile": "f4783f748f0d8fae81eca1873da463b4a89ca491b2fdb678e77cfd72.PubTator"}
+2026-04-01 13:54:40,124 - INFO - Connection accepted from ('127.0.0.1', 55336)
+2026-04-01 13:54:40,124 - INFO - Received data: {"biomedner_home": "/home/ocean/azheng/TrialMatchAI/source/Parser", "inputfile": "9733d32e38d30bc61407e9a5f3a5c6051c40282893ac0b66151931b7.PubTator"}
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+2026-04-01 14:10:20,677 - INFO - Connection accepted from ('127.0.0.1', 41844)
+2026-04-01 14:10:20,677 - INFO - Received data: {"biomedner_home": "/home/ocean/azheng/TrialMatchAI/source/Parser", "inputfile": "b88a6be3d188be4443209775d1debb56505b944adef64666059903c9.PubTator"}
+2026-04-01 14:10:23,080 - INFO - Connection accepted from ('127.0.0.1', 41858)
+2026-04-01 14:10:23,081 - INFO - Received data: {"biomedner_home": "/home/ocean/azheng/TrialMatchAI/source/Parser", "inputfile": "80c0c02ab93fae1d31d768cdcbfe7b9b89db8537590216cf6ede36d6.PubTator"}
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+Traceback (most recent call last):
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 206, in <module>
+    run_server(mt_ner, args)
+  File "/home/ocean/azheng/TrialMatchAI/source/Parser/gner_server.py", line 177, in run_server
+    s.bind((host, port))
+OSError: [Errno 98] Address already in use
+2026-04-01 15:32:56,748 - INFO - Connection accepted from ('127.0.0.1', 33560)
+2026-04-01 15:32:56,748 - INFO - Received data: {"biomedner_home": "/home/ocean/azheng/TrialMatchAI/source/Parser", "inputfile": "0c532692bb3cbc9cf7e7247f5e89ee8d2d3cc3d0a250d1a8dfaf8f8f.PubTator"}
+2026-04-01 15:32:59,676 - INFO - Connection accepted from ('127.0.0.1', 53138)
+2026-04-01 15:32:59,677 - INFO - Received data: {"biomedner_home": "/home/ocean/azheng/TrialMatchAI/source/Parser", "inputfile": "2b36f52870ebd53a6bcfa7ba0d676d0e841c21c556e3429e93be8339.PubTator"}

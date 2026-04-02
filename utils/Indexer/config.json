@@ -3,7 +3,7 @@
       "hosts": ["https://localhost:9200"],
       "ca_certs": "../../elasticsearch/certs/ca.crt",
       "username": "elastic",
-      "password": "QQ7wWoB_WnKe*L*X9tAW",
+      "password": "trialmatchai",
       "request_timeout": 300,
       "retry_on_timeout": true,
       "max_retries": 3

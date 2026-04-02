@@ -3227,3 +3227,196 @@ Exception in thread "main" java.net.BindException: Address already in use
 	at java.base/java.net.ServerSocket.<init>(ServerSocket.java:274)
 	at java.base/java.net.ServerSocket.<init>(ServerSocket.java:167)
 	at GNormPluslib.GNormPlusServer.main(GNormPlusServer.java:19)
+nohup: failed to run command 'java': No such file or directory
+nohup: failed to run command 'java': No such file or directory
+nohup: failed to run command 'java': No such file or directory
+nohup: failed to run command 'java': No such file or directory
+nohup: failed to run command 'java': No such file or directory
+nohup: failed to run command 'java': No such file or directory
+nohup: failed to run command 'java': No such file or directory
+nohup: failed to run command 'java': No such file or directory
+nohup: failed to run command 'java': No such file or directory
+nohup: failed to run command 'java': No such file or directory
+nohup: failed to run command 'java': No such file or directory
+nohup: failed to run command 'java': No such file or directory
+nohup: failed to run command 'java': No such file or directory
+nohup: failed to run command 'java': No such file or directory
+nohup: failed to run command 'java': No such file or directory
+nohup: failed to run command 'java': No such file or directory
+nohup: failed to run command 'java': No such file or directory
+nohup: failed to run command 'java': No such file or directory
+nohup: failed to run command 'java': No such file or directory
+nohup: failed to run command 'java': No such file or directory
+nohup: failed to run command 'java': No such file or directory
+nohup: failed to run command 'java': No such file or directory
+nohup: failed to run command 'java': No such file or directory
+nohup: failed to run command 'java': No such file or directory
+nohup: failed to run command 'java': No such file or directory
+nohup: failed to run command 'java': No such file or directory
+nohup: failed to run command 'java': No such file or directory
+nohup: failed to run command 'java': No such file or directory
+nohup: failed to run command 'java': No such file or directory
+nohup: failed to run command 'java': No such file or directory
+nohup: failed to run command 'java': No such file or directory
+nohup: failed to run command 'java': No such file or directory
+nohup: failed to run command 'java': No such file or directory
+nohup: failed to run command 'java': No such file or directory
+nohup: failed to run command 'java': No such file or directory
+nohup: failed to run command 'java': No such file or directory
+nohup: failed to run command 'java': No such file or directory
+nohup: failed to run command 'java': No such file or directory
+nohup: failed to run command 'java': No such file or directory
+nohup: failed to run command 'java': No such file or directory
+nohup: failed to run command 'java': No such file or directory
+nohup: failed to run command 'java': No such file or directory
+nohup: failed to run command 'java': No such file or directory
+nohup: failed to run command 'java': No such file or directory
+nohup: failed to run command 'java': No such file or directory
+nohup: failed to run command 'java': No such file or directory
+nohup: failed to run command 'java': No such file or directory
+nohup: failed to run command 'java': No such file or directory
+nohup: failed to run command 'java': No such file or directory
+nohup: failed to run command 'java': No such file or directory
+nohup: failed to run command 'java': No such file or directory
+nohup: failed to run command 'java': No such file or directory
+Ready (port 18888)
+Exception in thread "main" java.net.BindException: Address already in use (Bind failed)
+	at java.base/java.net.PlainSocketImpl.socketBind(Native Method)
+	at java.base/java.net.AbstractPlainSocketImpl.bind(AbstractPlainSocketImpl.java:452)
+	at java.base/java.net.ServerSocket.bind(ServerSocket.java:395)
+	at java.base/java.net.ServerSocket.<init>(ServerSocket.java:257)
+	at java.base/java.net.ServerSocket.<init>(ServerSocket.java:149)
+	at GNormPluslib.GNormPlusServer.main(GNormPlusServer.java:19)
+Exception in thread "main" java.net.BindException: Address already in use (Bind failed)
+	at java.base/java.net.PlainSocketImpl.socketBind(Native Method)
+	at java.base/java.net.AbstractPlainSocketImpl.bind(AbstractPlainSocketImpl.java:452)
+	at java.base/java.net.ServerSocket.bind(ServerSocket.java:395)
+	at java.base/java.net.ServerSocket.<init>(ServerSocket.java:257)
+	at java.base/java.net.ServerSocket.<init>(ServerSocket.java:149)
+	at GNormPluslib.GNormPlusServer.main(GNormPlusServer.java:19)
+Exception in thread "main" java.net.BindException: Address already in use (Bind failed)
+	at java.base/java.net.PlainSocketImpl.socketBind(Native Method)
+	at java.base/java.net.AbstractPlainSocketImpl.bind(AbstractPlainSocketImpl.java:452)
+	at java.base/java.net.ServerSocket.bind(ServerSocket.java:395)
+	at java.base/java.net.ServerSocket.<init>(ServerSocket.java:257)
+	at java.base/java.net.ServerSocket.<init>(ServerSocket.java:149)
+	at GNormPluslib.GNormPlusServer.main(GNormPlusServer.java:19)
+Exception in thread "main" java.net.BindException: Address already in use (Bind failed)
+	at java.base/java.net.PlainSocketImpl.socketBind(Native Method)
+	at java.base/java.net.AbstractPlainSocketImpl.bind(AbstractPlainSocketImpl.java:452)
+	at java.base/java.net.ServerSocket.bind(ServerSocket.java:395)
+	at java.base/java.net.ServerSocket.<init>(ServerSocket.java:257)
+	at java.base/java.net.ServerSocket.<init>(ServerSocket.java:149)
+	at GNormPluslib.GNormPlusServer.main(GNormPlusServer.java:19)
+Exception in thread "main" java.net.BindException: Address already in use (Bind failed)
+	at java.base/java.net.PlainSocketImpl.socketBind(Native Method)
+	at java.base/java.net.AbstractPlainSocketImpl.bind(AbstractPlainSocketImpl.java:452)
+	at java.base/java.net.ServerSocket.bind(ServerSocket.java:395)
+	at java.base/java.net.ServerSocket.<init>(ServerSocket.java:257)
+	at java.base/java.net.ServerSocket.<init>(ServerSocket.java:149)
+	at GNormPluslib.GNormPlusServer.main(GNormPlusServer.java:19)
+Exception in thread "main" java.net.BindException: Address already in use (Bind failed)
+	at java.base/java.net.PlainSocketImpl.socketBind(Native Method)
+	at java.base/java.net.AbstractPlainSocketImpl.bind(AbstractPlainSocketImpl.java:452)
+	at java.base/java.net.ServerSocket.bind(ServerSocket.java:395)
+	at java.base/java.net.ServerSocket.<init>(ServerSocket.java:257)
+	at java.base/java.net.ServerSocket.<init>(ServerSocket.java:149)
+	at GNormPluslib.GNormPlusServer.main(GNormPlusServer.java:19)
+Exception in thread "main" java.net.BindException: Address already in use (Bind failed)
+	at java.base/java.net.PlainSocketImpl.socketBind(Native Method)
+	at java.base/java.net.AbstractPlainSocketImpl.bind(AbstractPlainSocketImpl.java:452)
+	at java.base/java.net.ServerSocket.bind(ServerSocket.java:395)
+	at java.base/java.net.ServerSocket.<init>(ServerSocket.java:257)
+	at java.base/java.net.ServerSocket.<init>(ServerSocket.java:149)
+	at GNormPluslib.GNormPlusServer.main(GNormPlusServer.java:19)
+Exception in thread "main" java.net.BindException: Address already in use (Bind failed)
+	at java.base/java.net.PlainSocketImpl.socketBind(Native Method)
+	at java.base/java.net.AbstractPlainSocketImpl.bind(AbstractPlainSocketImpl.java:452)
+	at java.base/java.net.ServerSocket.bind(ServerSocket.java:395)
+	at java.base/java.net.ServerSocket.<init>(ServerSocket.java:257)
+	at java.base/java.net.ServerSocket.<init>(ServerSocket.java:149)
+	at GNormPluslib.GNormPlusServer.main(GNormPlusServer.java:19)
+Exception in thread "main" java.net.BindException: Address already in use (Bind failed)
+	at java.base/java.net.PlainSocketImpl.socketBind(Native Method)
+	at java.base/java.net.AbstractPlainSocketImpl.bind(AbstractPlainSocketImpl.java:452)
+	at java.base/java.net.ServerSocket.bind(ServerSocket.java:395)
+	at java.base/java.net.ServerSocket.<init>(ServerSocket.java:257)
+	at java.base/java.net.ServerSocket.<init>(ServerSocket.java:149)
+	at GNormPluslib.GNormPlusServer.main(GNormPlusServer.java:19)
+Exception in thread "main" java.net.BindException: Address already in use (Bind failed)
+	at java.base/java.net.PlainSocketImpl.socketBind(Native Method)
+	at java.base/java.net.AbstractPlainSocketImpl.bind(AbstractPlainSocketImpl.java:452)
+	at java.base/java.net.ServerSocket.bind(ServerSocket.java:395)
+	at java.base/java.net.ServerSocket.<init>(ServerSocket.java:257)
+	at java.base/java.net.ServerSocket.<init>(ServerSocket.java:149)
+	at GNormPluslib.GNormPlusServer.main(GNormPlusServer.java:19)
+Exception in thread "main" java.net.BindException: Address already in use (Bind failed)
+	at java.base/java.net.PlainSocketImpl.socketBind(Native Method)
+	at java.base/java.net.AbstractPlainSocketImpl.bind(AbstractPlainSocketImpl.java:452)
+	at java.base/java.net.ServerSocket.bind(ServerSocket.java:395)
+	at java.base/java.net.ServerSocket.<init>(ServerSocket.java:257)
+	at java.base/java.net.ServerSocket.<init>(ServerSocket.java:149)
+	at GNormPluslib.GNormPlusServer.main(GNormPlusServer.java:19)
+Exception in thread "main" java.net.BindException: Address already in use (Bind failed)
+	at java.base/java.net.PlainSocketImpl.socketBind(Native Method)
+	at java.base/java.net.AbstractPlainSocketImpl.bind(AbstractPlainSocketImpl.java:452)
+	at java.base/java.net.ServerSocket.bind(ServerSocket.java:395)
+	at java.base/java.net.ServerSocket.<init>(ServerSocket.java:257)
+	at java.base/java.net.ServerSocket.<init>(ServerSocket.java:149)
+	at GNormPluslib.GNormPlusServer.main(GNormPlusServer.java:19)
+Exception in thread "main" java.net.BindException: Address already in use (Bind failed)
+	at java.base/java.net.PlainSocketImpl.socketBind(Native Method)
+	at java.base/java.net.AbstractPlainSocketImpl.bind(AbstractPlainSocketImpl.java:452)
+	at java.base/java.net.ServerSocket.bind(ServerSocket.java:395)
+	at java.base/java.net.ServerSocket.<init>(ServerSocket.java:257)
+	at java.base/java.net.ServerSocket.<init>(ServerSocket.java:149)
+	at GNormPluslib.GNormPlusServer.main(GNormPlusServer.java:19)
+Exception in thread "main" java.net.BindException: Address already in use (Bind failed)
+	at java.base/java.net.PlainSocketImpl.socketBind(Native Method)
+	at java.base/java.net.AbstractPlainSocketImpl.bind(AbstractPlainSocketImpl.java:452)
+	at java.base/java.net.ServerSocket.bind(ServerSocket.java:395)
+	at java.base/java.net.ServerSocket.<init>(ServerSocket.java:257)
+	at java.base/java.net.ServerSocket.<init>(ServerSocket.java:149)
+	at GNormPluslib.GNormPlusServer.main(GNormPlusServer.java:19)
+Exception in thread "main" java.net.BindException: Address already in use (Bind failed)
+	at java.base/java.net.PlainSocketImpl.socketBind(Native Method)
+	at java.base/java.net.AbstractPlainSocketImpl.bind(AbstractPlainSocketImpl.java:452)
+	at java.base/java.net.ServerSocket.bind(ServerSocket.java:395)
+	at java.base/java.net.ServerSocket.<init>(ServerSocket.java:257)
+	at java.base/java.net.ServerSocket.<init>(ServerSocket.java:149)
+	at GNormPluslib.GNormPlusServer.main(GNormPlusServer.java:19)
+Exception in thread "main" java.net.BindException: Address already in use (Bind failed)
+	at java.base/java.net.PlainSocketImpl.socketBind(Native Method)
+	at java.base/java.net.AbstractPlainSocketImpl.bind(AbstractPlainSocketImpl.java:452)
+	at java.base/java.net.ServerSocket.bind(ServerSocket.java:395)
+	at java.base/java.net.ServerSocket.<init>(ServerSocket.java:257)
+	at java.base/java.net.ServerSocket.<init>(ServerSocket.java:149)
+	at GNormPluslib.GNormPlusServer.main(GNormPlusServer.java:19)
+Exception in thread "main" java.net.BindException: Address already in use (Bind failed)
+	at java.base/java.net.PlainSocketImpl.socketBind(Native Method)
+	at java.base/java.net.AbstractPlainSocketImpl.bind(AbstractPlainSocketImpl.java:452)
+	at java.base/java.net.ServerSocket.bind(ServerSocket.java:395)
+	at java.base/java.net.ServerSocket.<init>(ServerSocket.java:257)
+	at java.base/java.net.ServerSocket.<init>(ServerSocket.java:149)
+	at GNormPluslib.GNormPlusServer.main(GNormPlusServer.java:19)
+Exception in thread "main" java.net.BindException: Address already in use (Bind failed)
+	at java.base/java.net.PlainSocketImpl.socketBind(Native Method)
+	at java.base/java.net.AbstractPlainSocketImpl.bind(AbstractPlainSocketImpl.java:452)
+	at java.base/java.net.ServerSocket.bind(ServerSocket.java:395)
+	at java.base/java.net.ServerSocket.<init>(ServerSocket.java:257)
+	at java.base/java.net.ServerSocket.<init>(ServerSocket.java:149)
+	at GNormPluslib.GNormPlusServer.main(GNormPlusServer.java:19)
+Exception in thread "main" java.net.BindException: Address already in use (Bind failed)
+	at java.base/java.net.PlainSocketImpl.socketBind(Native Method)
+	at java.base/java.net.AbstractPlainSocketImpl.bind(AbstractPlainSocketImpl.java:452)
+	at java.base/java.net.ServerSocket.bind(ServerSocket.java:395)
+	at java.base/java.net.ServerSocket.<init>(ServerSocket.java:257)
+	at java.base/java.net.ServerSocket.<init>(ServerSocket.java:149)
+	at GNormPluslib.GNormPlusServer.main(GNormPlusServer.java:19)
+Exception in thread "main" java.net.BindException: Address already in use (Bind failed)
+	at java.base/java.net.PlainSocketImpl.socketBind(Native Method)
+	at java.base/java.net.AbstractPlainSocketImpl.bind(AbstractPlainSocketImpl.java:452)
+	at java.base/java.net.ServerSocket.bind(ServerSocket.java:395)
+	at java.base/java.net.ServerSocket.<init>(ServerSocket.java:257)
+	at java.base/java.net.ServerSocket.<init>(ServerSocket.java:149)
+	at GNormPluslib.GNormPlusServer.main(GNormPlusServer.java:19)
