@@ -6,9 +6,103 @@ from Matcher.models.embedding.text_embedder import TextEmbedder
 from Matcher.utils.logging_config import setup_logging
 from Matcher.utils.retry import with_retries
 
-from elasticsearch import Elasticsearch
+from elasticsearch import BadRequestError, Elasticsearch
 
 logger = setup_logging(__name__)
+
+# Helper that returns 0.0 when the doc is missing a vector field instead of
+# crashing with a Painless runtime error.
+_SAFE_COSINE = (
+    "double _safe(def qv, String f, def doc) {"
+    "  if (!doc.containsKey(f) || doc[f].size() == 0) return 0.0;"
+    "  return cosineSimilarity(qv, f);"
+    "}"
+)
+
+_VECTOR_ONLY_SCRIPT = _SAFE_COSINE + """
+    double maxConditionVectorScore = 0.0;
+    double maxTitleVectorScore = 0.0;
+    double maxSummaryVectorScore = 0.0;
+    double maxEligibilityVectorScore = 0.0;
+    double totalOtherConditionScore = 0.0;
+    for (int i = 0; i < params.query_vectors.length; ++i) {
+        maxConditionVectorScore  = Math.max(maxConditionVectorScore,  _safe(params.query_vectors[i], 'condition_vector', doc));
+        maxTitleVectorScore      = Math.max(maxTitleVectorScore,      _safe(params.query_vectors[i], 'brief_title_vector', doc));
+        maxSummaryVectorScore    = Math.max(maxSummaryVectorScore,    _safe(params.query_vectors[i], 'brief_summary_vector', doc));
+        maxEligibilityVectorScore= Math.max(maxEligibilityVectorScore,_safe(params.query_vectors[i], 'eligibility_criteria_vector', doc));
+    }
+    int otherConditionCount = params.other_condition_vectors.length;
+    for (int i = 0; i < otherConditionCount; ++i) {
+        totalOtherConditionScore += _safe(params.other_condition_vectors[i], 'condition_vector', doc);
+        totalOtherConditionScore += _safe(params.other_condition_vectors[i], 'brief_title_vector', doc);
+        totalOtherConditionScore += _safe(params.other_condition_vectors[i], 'eligibility_criteria_vector', doc);
+        totalOtherConditionScore += _safe(params.other_condition_vectors[i], 'brief_summary_vector', doc);
+    }
+    if (otherConditionCount > 0) {
+        totalOtherConditionScore /= (otherConditionCount * 4);
+    }
+    double normalizedConditionScore      = (maxConditionVectorScore + 1.0) / 2.0;
+    double normalizedTitleScore          = (maxTitleVectorScore + 1.0) / 2.0;
+    double normalizedSummaryScore        = (maxSummaryVectorScore + 1.0) / 2.0;
+    double normalizedEligibilityScore    = (maxEligibilityVectorScore + 1.0) / 2.0;
+    double normalizedOtherConditionScore = (totalOtherConditionScore + 1.0) / 2.0;
+    double combinedVectorScore = (
+        0.3 * normalizedConditionScore +
+        0.1 * normalizedTitleScore +
+        0.1 * normalizedSummaryScore +
+        0.2 * normalizedOtherConditionScore +
+        0.3 * normalizedEligibilityScore
+    );
+    if (combinedVectorScore < params.vector_score_threshold) {
+        return 0;
+    }
+    return combinedVectorScore;
+"""
+
+_HYBRID_SCRIPT = _SAFE_COSINE + """
+    double alpha = 0.5;
+    double beta = 0.5;
+    double textScore = _score;
+    double maxTextScore = params.max_text_score;
+    double normalizedTextScore = (maxTextScore == 0) ? 0 : textScore / maxTextScore;
+    double maxConditionVectorScore = 0.0;
+    double maxTitleVectorScore = 0.0;
+    double maxSummaryVectorScore = 0.0;
+    double maxEligibilityVectorScore = 0.0;
+    double totalOtherConditionScore = 0.0;
+    for (int i = 0; i < params.query_vectors.length; ++i) {
+        maxConditionVectorScore  = Math.max(maxConditionVectorScore,  _safe(params.query_vectors[i], 'condition_vector', doc));
+        maxTitleVectorScore      = Math.max(maxTitleVectorScore,      _safe(params.query_vectors[i], 'brief_title_vector', doc));
+        maxSummaryVectorScore    = Math.max(maxSummaryVectorScore,    _safe(params.query_vectors[i], 'brief_summary_vector', doc));
+        maxEligibilityVectorScore= Math.max(maxEligibilityVectorScore,_safe(params.query_vectors[i], 'eligibility_criteria_vector', doc));
+    }
+    int otherConditionCount = params.other_condition_vectors.length;
+    for (int i = 0; i < otherConditionCount; ++i) {
+        totalOtherConditionScore += _safe(params.other_condition_vectors[i], 'condition_vector', doc);
+        totalOtherConditionScore += _safe(params.other_condition_vectors[i], 'brief_title_vector', doc);
+        totalOtherConditionScore += _safe(params.other_condition_vectors[i], 'eligibility_criteria_vector', doc);
+        totalOtherConditionScore += _safe(params.other_condition_vectors[i], 'brief_summary_vector', doc);
+    }
+    if (otherConditionCount > 0) {
+        totalOtherConditionScore /= (otherConditionCount * 4);
+    }
+    double normalizedConditionScore      = (maxConditionVectorScore + 1.0) / 2.0;
+    double normalizedTitleScore          = (maxTitleVectorScore + 1.0) / 2.0;
+    double normalizedSummaryScore        = (maxSummaryVectorScore + 1.0) / 2.0;
+    double normalizedEligibilityScore    = (maxEligibilityVectorScore + 1.0) / 2.0;
+    double normalizedOtherConditionScore = (totalOtherConditionScore + 1.0) / 2.0;
+    double combinedVectorScore = (
+        0.3 * normalizedConditionScore +
+        0.1 * normalizedTitleScore +
+        0.1 * normalizedSummaryScore +
+        0.2 * normalizedOtherConditionScore +
+        0.3 * normalizedEligibilityScore
+    );
+    if (combinedVectorScore < params.vector_score_threshold) {
+        return 0;
+    }
+    return alpha * normalizedTextScore + beta * combinedVectorScore;
+"""
 
 
 class ClinicalTrialSearch:
@@ -36,8 +130,14 @@ class ClinicalTrialSearch:
             if ner_results and ner_results[0]:
                 synonyms = set()
                 for entity in ner_results[0]:
-                    if entity.get("entity_group", "").lower() == "disease":
-                        synonyms.update(entity.get("synonyms", []))
+                    if isinstance(entity, dict):
+                        if entity.get("entity_group", "").lower() == "disease":
+                            for syn in entity.get("synonyms", []):
+                                if isinstance(syn, str) and syn.strip():
+                                    synonyms.add(syn.strip())
+                    elif isinstance(entity, str) and entity.strip():
+                        # Some BioMedNER setups may return plain strings.
+                        synonyms.add(entity.strip())
                 return list(synonyms)
             logger.warning(f"No annotations found for condition: {condition}")
         except Exception as e:
@@ -274,45 +374,7 @@ class ClinicalTrialSearch:
                         }
                     },
                     "script": {
-                        "source": """
-                            double maxConditionVectorScore = 0.0;
-                            double maxTitleVectorScore = 0.0;
-                            double maxSummaryVectorScore = 0.0;
-                            double maxEligibilityVectorScore = 0.0;
-                            double totalOtherConditionScore = 0.0;
-                            for (int i = 0; i < params.query_vectors.length; ++i) {
-                                maxConditionVectorScore = Math.max(maxConditionVectorScore, cosineSimilarity(params.query_vectors[i], 'condition_vector'));
-                                maxTitleVectorScore = Math.max(maxTitleVectorScore, cosineSimilarity(params.query_vectors[i], 'brief_title_vector'));
-                                maxSummaryVectorScore = Math.max(maxSummaryVectorScore, cosineSimilarity(params.query_vectors[i], 'brief_summary_vector'));
-                                maxEligibilityVectorScore = Math.max(maxEligibilityVectorScore, cosineSimilarity(params.query_vectors[i], 'eligibility_criteria_vector'));
-                            }
-                            int otherConditionCount = params.other_condition_vectors.length;
-                            for (int i = 0; i < otherConditionCount; ++i) {
-                                totalOtherConditionScore += cosineSimilarity(params.other_condition_vectors[i], 'condition_vector');
-                                totalOtherConditionScore += cosineSimilarity(params.other_condition_vectors[i], 'brief_title_vector');
-                                totalOtherConditionScore += cosineSimilarity(params.other_condition_vectors[i], 'eligibility_criteria_vector');
-                                totalOtherConditionScore += cosineSimilarity(params.other_condition_vectors[i], 'brief_summary_vector');
-                            }
-                            if (otherConditionCount > 0) {
-                                totalOtherConditionScore /= (otherConditionCount * 4);
-                            }
-                            double normalizedConditionScore = (maxConditionVectorScore + 1.0) / 2.0;
-                            double normalizedTitleScore = (maxTitleVectorScore + 1.0) / 2.0;
-                            double normalizedSummaryScore = (maxSummaryVectorScore + 1.0) / 2.0;
-                            double normalizedEligibilityScore = (maxEligibilityVectorScore + 1.0) / 2.0;
-                            double normalizedOtherConditionScore = (totalOtherConditionScore + 1.0) / 2.0;
-                            double combinedVectorScore = (
-                                0.3 * normalizedConditionScore +
-                                0.1 * normalizedTitleScore +
-                                0.1 * normalizedSummaryScore +
-                                0.2 * normalizedOtherConditionScore +
-                                0.3 * normalizedEligibilityScore
-                            );
-                            if (combinedVectorScore < params.vector_score_threshold) {
-                                return 0;
-                            }
-                            return combinedVectorScore;
-                        """,
+                        "source": _VECTOR_ONLY_SCRIPT,
                         "params": {
                             "query_vectors": query_vectors,
                             "other_condition_vectors": other_vectors,
@@ -333,50 +395,7 @@ class ClinicalTrialSearch:
                     }
                 },
                 "script": {
-                    "source": """
-                        double alpha = 0.5;
-                        double beta = 0.5;
-                        double textScore = _score;
-                        double maxTextScore = params.max_text_score;
-                        double normalizedTextScore = (maxTextScore == 0) ? 0 : textScore / maxTextScore;
-                        double maxConditionVectorScore = 0.0;
-                        double maxTitleVectorScore = 0.0;
-                        double maxSummaryVectorScore = 0.0;
-                        double maxEligibilityVectorScore = 0.0;
-                        double totalOtherConditionScore = 0.0;
-                        for (int i = 0; i < params.query_vectors.length; ++i) {
-                            maxConditionVectorScore = Math.max(maxConditionVectorScore, cosineSimilarity(params.query_vectors[i], 'condition_vector'));
-                            maxTitleVectorScore = Math.max(maxTitleVectorScore, cosineSimilarity(params.query_vectors[i], 'brief_title_vector'));
-                            maxSummaryVectorScore = Math.max(maxSummaryVectorScore, cosineSimilarity(params.query_vectors[i], 'brief_summary_vector'));
-                            maxEligibilityVectorScore = Math.max(maxEligibilityVectorScore, cosineSimilarity(params.query_vectors[i], 'eligibility_criteria_vector'));
-                        }
-                        int otherConditionCount = params.other_condition_vectors.length;
-                        for (int i = 0; i < otherConditionCount; ++i) {
-                            totalOtherConditionScore += cosineSimilarity(params.other_condition_vectors[i], 'condition_vector');
-                            totalOtherConditionScore += cosineSimilarity(params.other_condition_vectors[i], 'brief_title_vector');
-                            totalOtherConditionScore += cosineSimilarity(params.other_condition_vectors[i], 'eligibility_criteria_vector');
-                            totalOtherConditionScore += cosineSimilarity(params.other_condition_vectors[i], 'brief_summary_vector');
-                        }
-                        if (otherConditionCount > 0) {
-                            totalOtherConditionScore /= (otherConditionCount * 4);
-                        }
-                        double normalizedConditionScore = (maxConditionVectorScore + 1.0) / 2.0;
-                        double normalizedTitleScore = (maxTitleVectorScore + 1.0) / 2.0;
-                        double normalizedSummaryScore = (maxSummaryVectorScore + 1.0) / 2.0;
-                        double normalizedEligibilityScore = (maxEligibilityVectorScore + 1.0) / 2.0;
-                        double normalizedOtherConditionScore = (totalOtherConditionScore + 1.0) / 2.0;
-                        double combinedVectorScore = (
-                            0.3 * normalizedConditionScore +
-                            0.1 * normalizedTitleScore +
-                            0.1 * normalizedSummaryScore +
-                            0.2 * normalizedOtherConditionScore +
-                            0.3 * normalizedEligibilityScore
-                        );
-                        if (combinedVectorScore < params.vector_score_threshold) {
-                            return 0;
-                        }
-                        return alpha * normalizedTextScore + beta * combinedVectorScore;
-                    """,
+                    "source": _HYBRID_SCRIPT,
                     "params": {
                         "query_vectors": query_vectors,
                         "other_condition_vectors": other_vectors,
@@ -452,6 +471,39 @@ class ClinicalTrialSearch:
             hits = response["hits"]["hits"]
             trials = [hit["_source"] for hit in hits]
             scores = [hit["_score"] for hit in hits]
+        except BadRequestError as exc:
+            # Typical cause: dense_vector runtime mismatch (e.g., custom index dims differ
+            # from current embedder output). Fall back to BM25 so pipeline can continue.
+            if mode in {"vector", "hybrid"}:
+                logger.warning(
+                    "Vector/hybrid ES query failed (%s). Falling back to BM25 for this request.",
+                    exc,
+                )
+                bm25_query = self.create_query(
+                    primary_synonyms,
+                    embeddings={},
+                    age=age if age is not None else 0,
+                    sex=sex,
+                    overall_status=overall_status,
+                    max_text_score=1.0,
+                    vector_score_threshold=vector_score_threshold,
+                    pre_selected_nct_ids=pre_selected_nct_ids,
+                    other_conditions=other_conditions,
+                    search_mode="bm25",
+                )
+                response = with_retries(
+                    lambda: self.es_client.search(
+                        index=self.index_name, body={"size": size, "query": bm25_query}
+                    ),
+                    logger=logger,
+                    action="ES trial search (bm25 fallback)",
+                )
+                hits = response["hits"]["hits"]
+                trials = [hit["_source"] for hit in hits]
+                scores = [hit["_score"] for hit in hits]
+            else:
+                logger.exception("Search failed; returning empty results.")
+                return [], []
         except Exception:
             logger.exception("Search failed; returning empty results.")
             return [], []
@@ -468,3 +520,4 @@ class ClinicalTrialSearch:
 
 def _clean_terms(terms: List[str]) -> List[str]:
     return [term.strip() for term in terms if term and term.strip()]
+

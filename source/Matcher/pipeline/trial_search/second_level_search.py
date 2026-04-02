@@ -1,7 +1,7 @@
 import math
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Dict, List, Optional
+from typing import Callable, Dict, List, Optional
 
 from Matcher.models.embedding.text_embedder import TextEmbedder
 from Matcher.models.llm.llm_reranker import LLMReranker
@@ -12,6 +12,28 @@ from Matcher.utils.retry import with_retries
 from elasticsearch import Elasticsearch
 
 logger = setup_logging(__name__)
+
+# Elasticsearch caps total terms across all `terms` queries in one request at
+# index.max_terms_count (default 65536). Splitting with bool.should still counts
+# every term, so large first-stage result sets must use multiple searches.
+_MAX_NCT_TERMS_PER_CLAUSE = 60000
+
+
+def _nct_id_filter_clause(nct_ids: List[str]) -> Dict:
+    """Filter by nct_id. Empty list matches nothing. Non-empty list must be
+    length <= _MAX_NCT_TERMS_PER_CLAUSE (callers batch larger lists)."""
+    if not nct_ids:
+        return {"bool": {"must_not": {"match_all": {}}}}
+    if len(nct_ids) > _MAX_NCT_TERMS_PER_CLAUSE:
+        raise ValueError(
+            f"nct_id filter has {len(nct_ids)} terms; max {_MAX_NCT_TERMS_PER_CLAUSE}"
+        )
+    return {"terms": {"nct_id": nct_ids}}
+
+
+def _merge_hits_by_score(hits: List[Dict], size: int) -> List[Dict]:
+    hits.sort(key=lambda h: float(h.get("_score", 0.0)), reverse=True)
+    return hits[:size]
 
 
 class SecondStageRetriever:
@@ -37,21 +59,106 @@ class SecondStageRetriever:
         self.bio_med_ner = bio_med_ner
         self.search_mode = search_mode.lower() if search_mode else "hybrid"
 
+    def retrieve_all_criteria(self, nct_ids: List[str]) -> List[Dict]:
+        """Load all criteria documents for the candidate trials without query-time retrieval."""
+        if not nct_ids:
+            return []
+
+        filters = [
+            _nct_id_filter_clause(nct_ids[i : i + _MAX_NCT_TERMS_PER_CLAUSE])
+            for i in range(0, len(nct_ids), _MAX_NCT_TERMS_PER_CLAUSE)
+        ]
+        all_hits: List[Dict] = []
+        page_size = 1000
+
+        for filt in filters:
+            from_offset = 0
+            while True:
+                body = {
+                    "from": from_offset,
+                    "size": page_size,
+                    "query": {"bool": {"filter": filt}},
+                }
+                response = with_retries(
+                    lambda b=body: self.es_client.search(index=self.index_name, body=b),
+                    logger=logger,
+                    action="ES criteria full scan",
+                )
+                hits = response["hits"]["hits"]
+                all_hits.extend(hits)
+                if len(hits) < page_size:
+                    break
+                from_offset += page_size
+
+        logger.info(
+            "[%s] Loaded %s criteria documents across %s candidate trials",
+            self.search_mode,
+            len(all_hits),
+            len(nct_ids),
+        )
+        return all_hits
+
+    def _search_criteria_batched(
+        self,
+        nct_ids: List[str],
+        build_query: Callable[[Dict], Dict],
+        action: str,
+    ) -> List[Dict]:
+        """Run one ES search per nct_id chunk so total terms stay under max_terms_count."""
+        if not nct_ids:
+            filters: List[Dict] = [_nct_id_filter_clause([])]
+        else:
+            filters = [
+                _nct_id_filter_clause(
+                    nct_ids[i : i + _MAX_NCT_TERMS_PER_CLAUSE]
+                )
+                for i in range(0, len(nct_ids), _MAX_NCT_TERMS_PER_CLAUSE)
+            ]
+        n_batches = len(filters)
+        fetch_size = (
+            self.size
+            if n_batches <= 1
+            else max(self.size, min(5000, self.size * n_batches))
+        )
+        all_hits: List[Dict] = []
+        for filt in filters:
+            body = {"size": fetch_size, "query": build_query(filt)}
+            response = with_retries(
+                lambda b=body: self.es_client.search(
+                    index=self.index_name, body=b
+                ),
+                logger=logger,
+                action=action,
+            )
+            all_hits.extend(response["hits"]["hits"])
+        return _merge_hits_by_score(all_hits, self.size)
+
     def get_synonyms(self, condition: str) -> List[str]:
         if self.bio_med_ner is None:
             logger.warning("BioMedNER not initialized; cannot extract synonyms.")
             return []
-        raw_result = self.bio_med_ner.annotate_texts_in_parallel(
-            [condition], max_workers=1
-        )
-        ner_results = raw_result
-        if ner_results and ner_results[0]:
-            synonyms = set()
-            for entity in ner_results[0]:
-                if entity.get("entity_group", "").lower() == "disease":
-                    synonyms.update(entity.get("synonyms", []))
-            return list(synonyms)
-        logger.warning(f"No annotations found for condition: {condition}")
+        try:
+            raw_result = self.bio_med_ner.annotate_texts_in_parallel(
+                [condition], max_workers=1
+            )
+            ner_results = raw_result
+            if ner_results and ner_results[0]:
+                synonyms = set()
+                for entity in ner_results[0]:
+                    if isinstance(entity, dict):
+                        if entity.get("entity_group", "").lower() == "disease":
+                            for syn in entity.get("synonyms", []):
+                                if isinstance(syn, str) and syn.strip():
+                                    synonyms.add(syn.strip())
+                    elif isinstance(entity, str) and entity.strip():
+                        # Some BioMedNER setups may return plain strings.
+                        synonyms.add(entity.strip())
+                return list(synonyms)
+            logger.warning(f"No annotations found for condition: {condition}")
+        except Exception as exc:
+            logger.error(
+                "BioMedNER synonym extraction failed for '%s': %s", condition, exc
+            )
         return []
 
     def retrieve_criteria(
@@ -67,9 +174,8 @@ class SecondStageRetriever:
                 else ["criterion"]
             )
 
-            if self.search_mode == "bm25":
-                # BM25 only query
-                es_query = {
+            def build_bm25_query(nct_filter: Dict) -> Dict:
+                return {
                     "bool": {
                         "should": [
                             {
@@ -97,11 +203,29 @@ class SecondStageRetriever:
                             },
                         ],
                         "minimum_should_match": 1,
-                        "filter": {"terms": {"nct_id": nct_ids}},
+                        "filter": nct_filter,
                     }
                 }
-            elif self.search_mode == "vector":
-                # Vector only query
+
+            if self.search_mode == "bm25":
+                try:
+                    hits = self._search_criteria_batched(
+                        nct_ids, build_bm25_query, "ES criteria search"
+                    )
+                    logger.info(
+                        "[%s] Retrieved %s documents for query: '%s'",
+                        self.search_mode,
+                        len(hits),
+                        query,
+                    )
+                    return query, hits
+                except Exception:
+                    logger.exception(
+                        "Second-level search failed for query: %s", query
+                    )
+                    return query, []
+
+            if self.search_mode == "vector":
                 if self.embedder is None:
                     logger.warning(
                         "Vector mode selected but embedder is None. Falling back to BM25."
@@ -115,44 +239,61 @@ class SecondStageRetriever:
                     )
                     return execute_query_bm25(query)
                 query_vector = vectors[0]
-                es_query = {
-                    "script_score": {
-                        "query": {
-                            "bool": {
-                                "filter": {"terms": {"nct_id": nct_ids}},
-                            }
-                        },
-                        "script": {
-                            "source": """
+
+                def build_vector_query(nct_filter: Dict) -> Dict:
+                    return {
+                        "script_score": {
+                            "query": {"bool": {"filter": nct_filter}},
+                            "script": {
+                                "source": """
                                 double vectorScore = (cosineSimilarity(params.query_vector, 'criterion_vector') + 1.0) / 2.0;
                                 if (vectorScore < params.vector_score_threshold) {
                                     return 0;
                                 }
                                 return vectorScore;
                             """,
-                            "params": {
-                                "query_vector": query_vector,
-                                "vector_score_threshold": 0.5,
+                                "params": {
+                                    "query_vector": query_vector,
+                                    "vector_score_threshold": 0.5,
+                                },
                             },
-                        },
+                        }
                     }
-                }
-            else:
-                # Hybrid mode (default)
-                if self.embedder is None:
-                    logger.warning(
-                        "Hybrid mode selected but embedder is None. Falling back to BM25."
-                    )
-                    return execute_query_bm25(query)
 
-                vectors = self.embedder.embed_texts([query])
-                if not vectors:
-                    logger.warning(
-                        "Empty query after preprocessing. Falling back to BM25."
+                try:
+                    hits = self._search_criteria_batched(
+                        nct_ids, build_vector_query, "ES criteria search"
                     )
-                    return execute_query_bm25(query)
-                query_vector = vectors[0]
-                es_query = {
+                    logger.info(
+                        "[%s] Retrieved %s documents for query: '%s'",
+                        self.search_mode,
+                        len(hits),
+                        query,
+                    )
+                    return query, hits
+                except Exception:
+                    logger.exception(
+                        "Second-level search failed for query: %s", query
+                    )
+                    return query, []
+
+            # Hybrid mode (default)
+            if self.embedder is None:
+                logger.warning(
+                    "Hybrid mode selected but embedder is None. Falling back to BM25."
+                )
+                return execute_query_bm25(query)
+
+            vectors = self.embedder.embed_texts([query])
+            if not vectors:
+                logger.warning(
+                    "Empty query after preprocessing. Falling back to BM25."
+                )
+                return execute_query_bm25(query)
+            query_vector = vectors[0]
+
+            def build_hybrid_query(nct_filter: Dict) -> Dict:
+                return {
                     "script_score": {
                         "query": {
                             "bool": {
@@ -182,7 +323,7 @@ class SecondStageRetriever:
                                     },
                                 ],
                                 "minimum_should_match": 1,
-                                "filter": {"terms": {"nct_id": nct_ids}},
+                                "filter": nct_filter,
                             }
                         },
                         "script": {
@@ -205,14 +346,9 @@ class SecondStageRetriever:
                 }
 
             try:
-                response = with_retries(
-                    lambda: self.es_client.search(
-                        index=self.index_name, body={"size": self.size, "query": es_query}
-                    ),
-                    logger=logger,
-                    action="ES criteria search",
+                hits = self._search_criteria_batched(
+                    nct_ids, build_hybrid_query, "ES criteria search"
                 )
-                hits = response["hits"]["hits"]
                 logger.info(
                     "[%s] Retrieved %s documents for query: '%s'",
                     self.search_mode,
@@ -225,52 +361,49 @@ class SecondStageRetriever:
                 return query, []
 
         def execute_query_bm25(query):
-            # Helper function for BM25-only fallback
             fields_to_search = (
                 ["criterion", "entities.synonyms"]
                 if self.bio_med_ner is not None
                 else ["criterion"]
             )
-            es_query = {
-                "bool": {
-                    "should": [
-                        {
-                            "multi_match": {
-                                "query": query,
-                                "fields": fields_to_search,
-                                "type": "best_fields",
-                                "operator": "and",
-                            }
-                        },
-                        {
-                            "multi_match": {
-                                "query": query,
-                                "fields": fields_to_search,
-                                "type": "phrase",
-                            }
-                        },
-                        {
-                            "multi_match": {
-                                "query": query,
-                                "fields": fields_to_search,
-                                "type": "best_fields",
-                                "operator": "or",
-                            }
-                        },
-                    ],
-                    "minimum_should_match": 1,
-                    "filter": {"terms": {"nct_id": nct_ids}},
+
+            def build_bm25_fallback(nct_filter: Dict) -> Dict:
+                return {
+                    "bool": {
+                        "should": [
+                            {
+                                "multi_match": {
+                                    "query": query,
+                                    "fields": fields_to_search,
+                                    "type": "best_fields",
+                                    "operator": "and",
+                                }
+                            },
+                            {
+                                "multi_match": {
+                                    "query": query,
+                                    "fields": fields_to_search,
+                                    "type": "phrase",
+                                }
+                            },
+                            {
+                                "multi_match": {
+                                    "query": query,
+                                    "fields": fields_to_search,
+                                    "type": "best_fields",
+                                    "operator": "or",
+                                }
+                            },
+                        ],
+                        "minimum_should_match": 1,
+                        "filter": nct_filter,
+                    }
                 }
-            }
+
             try:
-                response = with_retries(
-                    lambda: self.es_client.search(
-                        index=self.index_name, body={"size": self.size, "query": es_query}
-                    ),
-                    logger=logger,
-                    action="ES criteria bm25 search",
+                hits = self._search_criteria_batched(
+                    nct_ids, build_bm25_fallback, "ES criteria bm25 search"
                 )
-                hits = response["hits"]["hits"]
                 logger.info(
                     "[bm25] Retrieved %s documents for query: '%s'", len(hits), query
                 )
@@ -379,12 +512,27 @@ class SecondStageRetriever:
             )
             queries = queries[:max_queries]
 
-        query_to_hits = self.retrieve_criteria(nct_ids, queries)
         all_criteria = []
-        for query, hits in query_to_hits.items():
-            for hit in hits:
-                hit["query"] = query
-                all_criteria.append(hit)
+        if self.search_mode == "all_rerank":
+            base_criteria = self.retrieve_all_criteria(nct_ids)
+            for query in queries:
+                for hit in base_criteria:
+                    criterion = dict(hit)
+                    criterion["query"] = query
+                    all_criteria.append(criterion)
+            logger.info(
+                "[%s] Constructed %s query-criterion pairs from %s queries and %s criteria documents",
+                self.search_mode,
+                len(all_criteria),
+                len(queries),
+                len(base_criteria),
+            )
+        else:
+            query_to_hits = self.retrieve_criteria(nct_ids, queries)
+            for query, hits in query_to_hits.items():
+                for hit in hits:
+                    hit["query"] = query
+                    all_criteria.append(hit)
 
         # Check if reranker is available before trying to use it
         if use_reranker and self.llm_reranker is not None:
@@ -407,3 +555,4 @@ class SecondStageRetriever:
             write_text_file([trial["nct_id"] for trial in top_trials], save_path)
             logger.info(f"Top trials saved to {save_path}")
         return top_trials
+

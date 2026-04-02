@@ -103,9 +103,15 @@ def load_model_and_tokenizer(
     except Exception:
         pass
 
-    model = PeftModel.from_pretrained(
-        model, model_config["cot_adapter_path"], device_map=device_str
-    )
+    cot_raw = model_config.get("cot_adapter_path")
+    if cot_raw is not None and str(cot_raw).strip() != "":
+        adapter_dir = str(cot_raw).strip()
+        logger.info("Loading CoT LoRA from %s", adapter_dir)
+        model = PeftModel.from_pretrained(
+            model, adapter_dir, device_map=device_str
+        )
+    else:
+        logger.info("No CoT adapter path; using base model without LoRA.")
 
     # Optional: compile for extra speed when supported
     if bool(model_config.get("compile", False)):
@@ -121,3 +127,4 @@ def load_model_and_tokenizer(
         logger.warning("Model is not an instance of torch.nn.Module; skipping eval.")
     logger.info(f"Model loaded on {device_str}.")
     return model, tokenizer  # type: ignore[return-value]
+

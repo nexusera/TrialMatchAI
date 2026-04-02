@@ -153,18 +153,27 @@ def parse_xml_content(xml_content):
         return None
 
 
-def extract_eligibility_criteria(trial_id):
+def extract_eligibility_criteria(trial_id, xml_dir=None, json_dir=None):
     """
     Extract the eligibility criteria text for a clinical trial with the given trial ID.
 
+    Looks for XML first (ClinicalTrials.gov format), then falls back to JSON
+    (e.g. output from jsonify.py for Excel-derived data).
+
     Parameters:
         trial_id (str): The clinical trial ID.
+        xml_dir (str or None): Directory containing XML trial files.
+            Defaults to ``../../data/trials_xmls``.
+        json_dir (str or None): Directory containing JSON trial files
+            (from jsonify.py).  Checked when the XML is not found.
 
     Returns:
         str or None: The eligibility criteria text or None if not found.
     """
-    xml_file_path = os.path.join("..", "..", "data", "trials_xmls", f"{trial_id}.xml")
+    if xml_dir is None:
+        xml_dir = os.path.join("..", "..", "data", "trials_xmls")
 
+    xml_file_path = os.path.join(xml_dir, f"{trial_id}.xml")
     if os.path.exists(xml_file_path):
         xml_content = read_xml_file(xml_file_path)
         if xml_content is None:
@@ -183,7 +192,24 @@ def extract_eligibility_criteria(trial_id):
             )
             return None
 
-    logging.warning(f"XML file for trial ID {trial_id} not found.")
+    if json_dir is not None:
+        json_file_path = os.path.join(json_dir, f"{trial_id}.json")
+        if os.path.exists(json_file_path):
+            try:
+                with open(json_file_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                eligibility = data.get("eligibility_criteria")
+                if eligibility and isinstance(eligibility, str):
+                    return eligibility.strip()
+                else:
+                    logging.warning(
+                        f"No eligibility_criteria field in JSON for {trial_id}."
+                    )
+            except (json.JSONDecodeError, IOError) as e:
+                logging.error(f"Error reading JSON for {trial_id}: {e}")
+            return None
+
+    logging.warning(f"No XML or JSON file found for trial ID {trial_id}.")
     return None
 
 
@@ -588,6 +614,8 @@ def eic_text_preprocessing(
     regex_path="../../data/regex/regex_patterns.json",
     exceptions_path="../../data/regex/exception_regex_patterns.json",
     output_path="../../data/preprocessed_data/clintra/",
+    xml_dir=None,
+    json_dir=None,
 ):
     """
     Main preprocessing function for eligibility criteria text from a list of clinical trial IDs.
@@ -597,6 +625,8 @@ def eic_text_preprocessing(
         regex_path (str): Path to the regex patterns JSON file.
         exceptions_path (str): Path to the exception regex patterns JSON file.
         output_path (str): Directory path to save the preprocessed CSV file.
+        xml_dir (str or None): Directory containing XML trial files.
+        json_dir (str or None): Directory containing JSON trial files (from jsonify.py).
 
     Returns:
         pandas.DataFrame or None: The preprocessed DataFrame or None if no data is processed.
@@ -608,7 +638,7 @@ def eic_text_preprocessing(
 
     for nid in _ids:
         print(f"Processing Trial ID: {nid}")
-        eic_text = extract_eligibility_criteria(nid)
+        eic_text = extract_eligibility_criteria(nid, xml_dir=xml_dir, json_dir=json_dir)
         if eic_text:
             preprocessed_text = extract_separate_inclusion_exclusion(
                 eic_text, regex_patterns, exception_patterns

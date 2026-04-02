@@ -264,6 +264,12 @@ class ClinicalSummarizer:
         You are a specialized medical assistant designed for precise and accurate clinical trial matching.
         Analyze the patient's medical description carefully and extract clinically relevant information for trial eligibility assessment.
 
+        Language requirement:
+        - Detect the dominant language of the provided patient description.
+        - Keep all extracted terms and expanded sentences in that same dominant language.
+        - Do not translate to another language unless the source text is already mixed-language.
+        - If mixed-language input exists, prefer the dominant language and keep key medical entities exactly as written in source text.
+
         1. **Primary Condition**:
             - Determine the primary medical conditions based on explicit patient information and overall clinical context.
             - List up to 10 medically recognized synonyms, aliases, or closely related medical terms for the primary conditions.
@@ -290,33 +296,37 @@ class ClinicalSummarizer:
         ]
         }
         """
+        source_text = " ".join(sentences)
+        source_has_cjk = self._contains_cjk(source_text)
+
         messages = [
             {"role": "system", "content": SYSTEM_PROMPT.strip()},
-            {"role": "user", "content": " ".join(sentences)},
+            {"role": "user", "content": source_text},
         ]
 
         try:
-            prompt = self.tokenizer.apply_chat_template(
-                messages,
-                truncate=False,
-                add_generation_prompt=True,
-                return_tensors="pt",
-            ).to(self.model.device)
+            summary = self._run_generation(messages)
 
-            with torch.no_grad():
-                output_ids = self.model.generate(
-                    prompt,
-                    max_new_tokens=2048,
-                    do_sample=False,
-                    return_dict_in_generate=False,
-                    pad_token_id=self.tokenizer.eos_token_id,
+            # If source is Chinese but extracted keywords are mostly non-Chinese,
+            # retry once with a stricter language instruction.
+            if source_has_cjk and self._summary_lacks_cjk(summary):
+                logger.warning(
+                    "Detected Chinese input but non-Chinese keyword output; retrying with stricter language instruction."
                 )
+                retry_messages = [
+                    {"role": "system", "content": SYSTEM_PROMPT.strip()},
+                    {
+                        "role": "user",
+                        "content": (
+                            "重要：请严格使用中文输出 JSON 中的 main_conditions、other_conditions、expanded_sentences。"
+                            "不要翻译成英文。仅保留原始文本中已出现的英文基因或药物名称。\n\n"
+                            + source_text
+                        ),
+                    },
+                ]
+                summary = self._run_generation(retry_messages)
 
-            # Only decode the newly generated tokens
-            generated_text = self.tokenizer.decode(
-                output_ids[0][prompt.shape[-1] :], skip_special_tokens=True
-            )
-            return self._extract_llm_output(generated_text)
+            return summary
 
         except Exception as e:
             logger.error(f"LLM generation failed: {e}")
@@ -326,6 +336,40 @@ class ClinicalSummarizer:
                 "expanded_sentences": [],
                 "error": str(e),
             }
+
+    def _run_generation(self, messages: List[Dict[str, str]]) -> Dict:
+        prompt = self.tokenizer.apply_chat_template(
+            messages,
+            truncate=False,
+            add_generation_prompt=True,
+            return_tensors="pt",
+        ).to(self.model.device)
+
+        with torch.no_grad():
+            output_ids = self.model.generate(
+                prompt,
+                max_new_tokens=2048,
+                do_sample=False,
+                return_dict_in_generate=False,
+                pad_token_id=self.tokenizer.eos_token_id,
+            )
+
+        generated_text = self.tokenizer.decode(
+            output_ids[0][prompt.shape[-1] :], skip_special_tokens=True
+        )
+        return self._extract_llm_output(generated_text)
+
+    @staticmethod
+    def _contains_cjk(text: str) -> bool:
+        return bool(re.search(r"[\u4e00-\u9fff]", text or ""))
+
+    def _summary_lacks_cjk(self, summary: Dict) -> bool:
+        terms: List[str] = []
+        terms.extend(summary.get("main_conditions", []) or [])
+        terms.extend(summary.get("other_conditions", []) or [])
+        terms.extend(summary.get("expanded_sentences", []) or [])
+        combined = " ".join(str(t) for t in terms)
+        return bool(combined.strip()) and not self._contains_cjk(combined)
 
     def _extract_llm_output(self, generated_text: str) -> Dict:
         try:
@@ -384,3 +428,4 @@ def process_phenopacket(
     except Exception as e:
         logger.error(f"Processing failed: {e}")
         return False
+

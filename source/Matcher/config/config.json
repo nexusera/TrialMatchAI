@@ -67,7 +67,10 @@
   "search": {
     "vector_score_threshold": 0.5,
     "max_trials_first_level": 300,
-    "max_trials_second_level": 100
+    "max_trials_second_level": 100,
+    "skip_first_level": false,
+    "resume_from_second_level": false,
+    "second_level_search_mode": "hybrid"
   },
   "use_cot_reasoning": true,
   "cot_backend": "vllm",
@@ -84,6 +87,9 @@
     "length_bucket": true,
     "gpu_memory_utilization": 0.5,
     "max_model_len": 8192,
-    "tensor_parallel_size": 1
+    "tensor_parallel_size": 1,
+    "max_num_seqs": 128,
+    "enforce_eager": false
   }
 }
+

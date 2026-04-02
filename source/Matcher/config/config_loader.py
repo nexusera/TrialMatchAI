@@ -16,6 +16,17 @@ except Exception:  # pragma: no cover - optional dependency
 logger = setup_logging(__name__)
 
 
+def collapse_blank_peft_model_paths(config: Dict[str, Any]) -> None:
+    """Treat empty/whitespace-only LoRA paths as disabled (avoids PEFT hub id '')."""
+    model = config.get("model")
+    if not isinstance(model, dict):
+        return
+    for key in ("cot_adapter_path", "reranker_adapter_path"):
+        val = model.get(key)
+        if val is not None and not str(val).strip():
+            model[key] = ""
+
+
 def load_config(config_path: str = "Matcher/config/config.json") -> Dict[str, Any]:
     """Load and validate configuration from a JSON file with env overrides."""
     if load_dotenv:
@@ -27,8 +38,10 @@ def load_config(config_path: str = "Matcher/config/config.json") -> Dict[str, An
     raw = apply_env_overrides(raw)
     settings = TrialMatchSettings.model_validate(raw)
     cfg = settings.to_dict()
+    collapse_blank_peft_model_paths(cfg)
     if cfg.get("elasticsearch", {}).get("password") in {"", "CHANGE_ME"}:
         logger.warning(
             "Elasticsearch password is not set. Use TRIALMATCHAI_ES_PASSWORD to supply it."
         )
     return cfg
+

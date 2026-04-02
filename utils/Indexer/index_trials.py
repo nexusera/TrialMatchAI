@@ -37,6 +37,32 @@ def load_processed(folder: Path) -> list[dict]:
     return docs
 
 
+def _is_zero_vector(vec: list) -> bool:
+    return isinstance(vec, list) and len(vec) > 0 and all(v == 0.0 for v in vec)
+
+
+def clean_doc_for_es(doc: dict) -> dict:
+    """Remove None/null values and zero-magnitude vectors that violate the ES mapping."""
+    cleaned = {}
+    for key, value in doc.items():
+        if value is None:
+            continue
+        if key in ("start_date", "completion_date") and not value:
+            continue
+        if key in ("minimum_age", "maximum_age"):
+            try:
+                cleaned[key] = float(value)
+            except (ValueError, TypeError):
+                continue
+        elif key.endswith("_vector"):
+            if _is_zero_vector(value):
+                continue
+            cleaned[key] = value
+        else:
+            cleaned[key] = value
+    return cleaned
+
+
 def create_index(es: Elasticsearch, name: str, dims: int):
     body = {
         "settings": {
@@ -140,21 +166,27 @@ def main():
             "_op_type": "index",
             "_index": args.index_name,
             "_id": doc["nct_id"],
-            "_source": doc,
+            "_source": clean_doc_for_es(doc),
         }
         for doc in docs
     ]
 
-    success, failures = bulk(
+    success, errors = bulk(
         client=es,
         actions=actions,
         chunk_size=args.batch_size,
-        stats_only=True,
+        stats_only=False,
         raise_on_error=False,
     )
     es.indices.refresh(index=args.index_name)
-    print(f"✅ Indexed {success} documents; {failures} failures.")
+    if errors:
+        print(f"\n⚠️  {len(errors)} failures. First 3 errors:")
+        for err in errors[:3]:
+            print(json.dumps(err, indent=2, default=str))
+    print(f"\n✅ Indexed {success} documents; {len(errors)} failures.")
 
 
 if __name__ == "__main__":
     main()
+
+

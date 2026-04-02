@@ -85,6 +85,19 @@ class SearchSettings(BaseModel):
     vector_score_threshold: float = Field(0.5, ge=0.0, le=1.0)
     max_trials_first_level: int = Field(300, ge=1)
     max_trials_second_level: int = Field(100, ge=1)
+    skip_first_level: bool = False
+    resume_from_second_level: bool = False
+    second_level_search_mode: str = "hybrid"
+
+    @field_validator("second_level_search_mode")
+    @classmethod
+    def validate_second_level_search_mode(cls, value: str) -> str:
+        if value not in {"hybrid", "bm25", "vector", "all_rerank"}:
+            raise ValueError(
+                "search.second_level_search_mode must be one of "
+                "'hybrid', 'bm25', 'vector', or 'all_rerank'"
+            )
+        return value
 
 
 class RagSettings(BaseModel):
@@ -102,6 +115,8 @@ class VllmSettings(BaseModel):
     gpu_memory_utilization: float = Field(0.5, gt=0.0, le=1.0)
     max_model_len: int = Field(8192, ge=256)
     tensor_parallel_size: int = Field(1, ge=1)
+    max_num_seqs: int = Field(128, ge=1)
+    enforce_eager: bool = False
 
 
 class CotSettings(BaseModel):
@@ -175,3 +190,4 @@ def apply_env_overrides(raw: Dict[str, Any]) -> Dict[str, Any]:
         except ValueError:
             pass
     return raw
+

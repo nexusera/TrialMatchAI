@@ -20,9 +20,9 @@ BASE_TMP_SUPERDIR = os.path.join(os.path.dirname(__file__), "tmp")
 DICT_PATH = Path("Parser/resources/normalization/dictionary")
 dict_paths = {
     "gene": DICT_PATH / "dict_Gene.txt",
-    "disease": DICT_PATH / "dict_Disease_20210630.txt",
-    "cell type": DICT_PATH / "dict_CellType_20210810.txt",
-    "drug": DICT_PATH / "dict_ChemicalCompound_20210630.txt",
+    "disease": DICT_PATH / "dict_Disease.txt",
+    "cell type": DICT_PATH / "dict_CellType.txt",
+    "drug": DICT_PATH / "dict_ChemicalsDrugs.txt",
     "procedure": DICT_PATH / "dict_Procedures.txt",
     "sign symptom": DICT_PATH / "dict_SignSymptom.txt",
 }
@@ -165,50 +165,140 @@ def process_files(device_id, ids_to_process, biomedner_params, shared_dicts):
         process_file(idx)
 
 
+def _load_ids_from_trec() -> set:
+    """Load NCT IDs from the default TREC CSV files."""
+    trec_dir = os.path.join(os.path.dirname(__file__), "../../data/trec")
+    ids: set = set()
+    for csv_name in ("Unique_NCT_IDs_from_2021_File.csv",
+                     "Unique_NCT_IDs_from_2022_File.csv"):
+        csv_path = os.path.join(trec_dir, csv_name)
+        if os.path.isfile(csv_path):
+            df = pd.read_csv(csv_path)
+            ids.update(df["Unique NCT IDs"].unique().tolist())
+        else:
+            print(f"Warning: TREC file not found, skipping: {csv_path}")
+    return ids
+
+
+def _load_ids_from_file(path: str) -> set:
+    """Load IDs from a plain-text file (one ID per line)."""
+    ids: set = set()
+    with open(path) as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith("#"):
+                ids.add(line)
+    return ids
+
+
+def build_parser():
+    import argparse
+    parser = argparse.ArgumentParser(
+        description="Parse clinical-trial eligibility criteria with BioMedNER.",
+    )
+    parser.add_argument(
+        "--ids-file", default=None,
+        help="Plain-text file with one NCT ID per line. "
+             "If omitted, loads from default TREC CSVs.",
+    )
+    parser.add_argument(
+        "--input-dir", default=None,
+        help="Directory with preprocessed CSVs (default: ../../data/preprocessed_data)",
+    )
+    parser.add_argument(
+        "--output-dir", default=None,
+        help="Directory for output JSONs (default: ../../data/parsed_trec)",
+    )
+    parser.add_argument(
+        "--tmp-dir", default=None,
+        help="Temporary directory for BioMedNER (default: Parser/tmp)",
+    )
+    parser.add_argument(
+        "--num-processes", type=int, default=8,
+        help="Number of parallel worker processes (default: 8)",
+    )
+    parser.add_argument(
+        "--gpu-ids", default="0",
+        help="Comma-separated GPU IDs to cycle across workers (default: '0')",
+    )
+    parser.add_argument(
+        "--biomedner-host", default="localhost",
+        help="BioMedNER server host (default: localhost)",
+    )
+    parser.add_argument(
+        "--biomedner-port", type=int, default=18894,
+        help="BioMedNER server port (default: 18894)",
+    )
+    parser.add_argument(
+        "--gner-host", default="localhost",
+        help="GNER server host (default: localhost)",
+    )
+    parser.add_argument(
+        "--gner-port", type=int, default=18783,
+        help="GNER server port (default: 18783)",
+    )
+    parser.add_argument("--no-cuda", action="store_true", help="Disable CUDA")
+    return parser
+
+
 if __name__ == "__main__":
     import multiprocessing
 
-    # Load dictionaries once
+    args = build_parser().parse_args()
+
+    # Override global paths if CLI args provided
+    if args.input_dir:
+        globals()["BASE_INPUT_FILEPATH"] = args.input_dir
+    if args.output_dir:
+        globals()["BASE_OUTPUT_FILEPATH_CT"] = args.output_dir
+    if args.tmp_dir:
+        globals()["BASE_TMP_SUPERDIR"] = args.tmp_dir
+
+    os.makedirs(BASE_OUTPUT_FILEPATH_CT, exist_ok=True)
+    os.makedirs(BASE_TMP_SUPERDIR, exist_ok=True)
+
     shared_dicts = load_shared_dictionaries()
 
-    # Define BioMedNER parameters
     biomedner_params = {
         "max_word_len": 50,
         "seed": 2019,
         "gene_norm_port": 18888,
         "disease_norm_port": 18892,
-        "biomedner_host": "localhost",
-        "biomedner_port": 18894,
-        "gner_host": "localhost",
-        "gner_port": 18783,
+        "biomedner_host": args.biomedner_host,
+        "biomedner_port": args.biomedner_port,
+        "gner_host": args.gner_host,
+        "gner_port": args.gner_port,
         "time_format": "[%d/%b/%Y %H:%M:%S.%f]",
         "use_neural_normalizer": True,
-        "no_cuda": False,
+        "no_cuda": args.no_cuda,
     }
 
-    # Load your NCT IDs
-    df_trec21 = pd.read_csv("../../data/trec/Unique_NCT_IDs_from_2021_File.csv")
-    df_trec22 = pd.read_csv("../../data/trec/Unique_NCT_IDs_from_2022_File.csv")
-    nct_ids21 = df_trec21["Unique NCT IDs"].unique().tolist()
-    nct_ids22 = df_trec22["Unique NCT IDs"].unique().tolist()
-    unique_ids = set(nct_ids21 + nct_ids22)
-    # Prepare the list of unprocessed ids
+    # Load NCT IDs
+    if args.ids_file:
+        unique_ids = _load_ids_from_file(args.ids_file)
+    else:
+        unique_ids = _load_ids_from_trec()
+
+    if not unique_ids:
+        print("Error: No NCT IDs to process.")
+        exit(1)
+
     unprocessed_ids = [
         idx
         for idx in unique_ids
         if not os.path.exists(os.path.join(BASE_OUTPUT_FILEPATH_CT, f"{idx}.json"))
     ]
+    print(f"Total IDs: {len(unique_ids)}, unprocessed: {len(unprocessed_ids)}")
 
-    # Define your device IDs
-    device_ids = ["0"]  # List of GPU IDs as strings
+    if not unprocessed_ids:
+        print("All IDs already processed. Nothing to do.")
+        exit(0)
 
-    # Define the number of processes you want
-    num_processes = 8  # For example, 12 processes
+    device_ids = [d.strip() for d in args.gpu_ids.split(",")]
+    num_processes = min(args.num_processes, len(unprocessed_ids))
 
-    # Create a list of device IDs cycling through the available GPUs
     process_device_ids = [device_ids[i % len(device_ids)] for i in range(num_processes)]
 
-    # Divide unprocessed_ids among processes
     chunks = [[] for _ in range(num_processes)]
     for i, idx in enumerate(unprocessed_ids):
         chunks[i % num_processes].append(idx)
@@ -217,7 +307,7 @@ if __name__ == "__main__":
     for i in range(num_processes):
         device_id = process_device_ids[i]
         ids_chunk = chunks[i]
-        if ids_chunk:  # Only start a process if there's work to do
+        if ids_chunk:
             p = multiprocessing.Process(
                 target=process_files,
                 args=(device_id, ids_chunk, biomedner_params, shared_dicts),
@@ -227,3 +317,5 @@ if __name__ == "__main__":
 
     for p in processes:
         p.join()
+
+
