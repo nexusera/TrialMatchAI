@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import time
 from typing import Dict, List
 
@@ -126,6 +127,7 @@ class BatchTrialProcessor:
                         "- Ensure all criteria are assessed one-by-one.\n"
                         "- Use **only** the provided patient data; **do not infer, assume, or extrapolate beyond the given information.**\n"
                         "- Justifications must be strictly based on direct evidence from the patient profile.\n"
+                        "- Return exactly one JSON object and no extra prose, no markdown fences, and no leading or trailing commentary.\n"
                         "### RESPONSE FORMAT (STRICTLY FOLLOW)\n"
                         "{\n"
                         '  "Inclusion_Criteria_Evaluation": [\n'
@@ -167,6 +169,7 @@ class BatchTrialProcessor:
                         '- If Inclusion Criterion: "Met" | "Not Met" | "Unclear" | "Irrelevant"\n'
                         '- If Exclusion Criterion: "Violated" | "Not Violated" | "Unclear" | "Irrelevant"\n\n'
                         "Provide a justification for each classification based strictly on the provided data. "
+                        "Return exactly one JSON object and no extra prose, no markdown fences, and no leading or trailing commentary. "
                         "Output this JSON schema:\n"
                         "{\n"
                         '  "Inclusion_Criteria_Evaluation": [ {"Criterion": "...", "Classification": "...", "Justification": "..."} ],\n'
@@ -261,24 +264,142 @@ class BatchTrialProcessor:
 
     # ---------------------- Persistence ----------------------
 
+    def _extract_fenced_json_blocks(self, response: str) -> List[str]:
+        pattern = re.compile(r"```(?:json)?\s*(.*?)```", re.IGNORECASE | re.DOTALL)
+        return [match.group(1).strip() for match in pattern.finditer(response)]
+
+    def _extract_balanced_json_objects(self, text: str) -> List[str]:
+        objects: List[str] = []
+        start = None
+        depth = 0
+        in_string = False
+        escaped = False
+
+        for i, ch in enumerate(text):
+            if in_string:
+                if escaped:
+                    escaped = False
+                elif ch == "\\":
+                    escaped = True
+                elif ch == '"':
+                    in_string = False
+                continue
+
+            if ch == '"':
+                in_string = True
+                continue
+
+            if ch == "{":
+                if depth == 0:
+                    start = i
+                depth += 1
+            elif ch == "}":
+                if depth > 0:
+                    depth -= 1
+                    if depth == 0 and start is not None:
+                        objects.append(text[start : i + 1])
+                        start = None
+
+        return objects
+
+    def _close_trailing_json(self, text: str) -> str:
+        stack: List[str] = []
+        in_string = False
+        escaped = False
+
+        for ch in text:
+            if in_string:
+                if escaped:
+                    escaped = False
+                elif ch == "\\":
+                    escaped = True
+                elif ch == '"':
+                    in_string = False
+                continue
+
+            if ch == '"':
+                in_string = True
+            elif ch == "{":
+                stack.append("}")
+            elif ch == "[":
+                stack.append("]")
+            elif ch in ("}", "]") and stack and stack[-1] == ch:
+                stack.pop()
+
+        if in_string:
+            text += '"'
+        if stack:
+            text += "".join(reversed(stack))
+        return text
+
+    def _try_parse_json_dict(self, candidate: str):
+        candidate = candidate.strip()
+        if not candidate:
+            return None
+
+        normalized = candidate.removeprefix("```json").removeprefix("```").strip()
+        normalized = normalized.removesuffix("```").strip()
+
+        decoder = json.JSONDecoder()
+        parse_attempts = [normalized]
+        repaired = self._close_trailing_json(normalized)
+        if repaired != normalized:
+            parse_attempts.append(repaired)
+
+        for attempt in parse_attempts:
+            try:
+                parsed = json.loads(attempt)
+                if isinstance(parsed, dict):
+                    return parsed
+            except json.JSONDecodeError:
+                pass
+
+            for idx, ch in enumerate(attempt):
+                if ch != "{":
+                    continue
+                try:
+                    parsed, _ = decoder.raw_decode(attempt[idx:])
+                    if isinstance(parsed, dict):
+                        return parsed
+                except json.JSONDecodeError:
+                    continue
+
+        return None
+
+    def _extract_json_payload(self, response: str):
+        candidates: List[str] = []
+        seen = set()
+
+        def add_candidate(text: str):
+            text = text.strip()
+            if text and text not in seen:
+                seen.add(text)
+                candidates.append(text)
+
+        add_candidate(response)
+        for block in self._extract_fenced_json_blocks(response):
+            add_candidate(block)
+        for obj in self._extract_balanced_json_objects(response):
+            add_candidate(obj)
+
+        for candidate in candidates:
+            parsed = self._try_parse_json_dict(candidate)
+            if parsed is not None:
+                return parsed
+
+        return None
+
     def _save_outputs(self, nct_id: str, response: str, output_folder: str):
         try:
             os.makedirs(output_folder, exist_ok=True)
             txt_path = f"{output_folder}/{nct_id}.txt"
             write_text_file([response], txt_path)
-            try:
-                # naive JSON slice (you may replace with a balanced-brace parser if needed)
-                start = response.find("{")
-                end = response.rfind("}")
-                if start != -1 and end != -1 and end > start:
-                    json_str = response[start : end + 1]
-                    json_data = json.loads(json_str)
-                    write_json_file(json_data, f"{output_folder}/{nct_id}.json")
-                    logger.info(f"Processed {nct_id} successfully")
-                else:
-                    logger.error(f"Invalid JSON boundaries for {nct_id}")
-            except json.JSONDecodeError as e:
-                logger.error(f"Invalid JSON response for {nct_id}: {str(e)}")
+            json_data = self._extract_json_payload(response)
+            if json_data is not None:
+                write_json_file(json_data, f"{output_folder}/{nct_id}.json")
+                logger.info(f"Processed {nct_id} successfully")
+            else:
+                logger.error(f"Unable to recover JSON response for {nct_id}")
         except Exception as e:
             logger.error(f"Failed to save {nct_id}: {str(e)}")
 

@@ -25,7 +25,7 @@ import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Sequence
+from typing import Dict, List, Optional, Sequence
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -45,6 +45,8 @@ DEFAULT_REQUIRED_PREFILL_FILES = (
     "first_level_scores.json",
     "top_trials.txt",
 )
+DEFAULT_PREFILL_KEYWORDS_ONLY = ("keywords.json",)
+DEFAULT_PREFILL_RESUME_FILES = ("keywords.json", "top_trials.txt")
 
 QWEN_MODELS: Dict[str, str] = {
     "qwen3_4b": "/data/ocean/model/Qwen/Qwen3-4B/",
@@ -244,6 +246,11 @@ def _parse_args() -> argparse.Namespace:
         help="Stop immediately when one experiment fails.",
     )
     parser.add_argument(
+        "--force-rerun-completed",
+        action="store_true",
+        help="Rerun experiments even if every patient already has ranked_trials.json.",
+    )
+    parser.add_argument(
         "--manifest-name",
         default="matcher_experiment_manifest.json",
         help="Manifest filename written under --results-root.",
@@ -324,6 +331,48 @@ def _has_resume_artifacts(
     return missing
 
 
+def _summarize_experiment_completion(
+    patient_ids: Sequence[str], output_dir: Path
+) -> Dict[str, object]:
+    completed_patients: List[str] = []
+    missing_patients: List[str] = []
+    for patient_id in patient_ids:
+        ranked_path = output_dir / patient_id / "ranked_trials.json"
+        if ranked_path.exists():
+            completed_patients.append(patient_id)
+        else:
+            missing_patients.append(patient_id)
+
+    return {
+        "completed_patients": completed_patients,
+        "missing_patients": missing_patients,
+        "is_complete": not missing_patients,
+    }
+
+
+def _select_prefill_source(args: argparse.Namespace, experiment: Experiment) -> str:
+    if experiment.resume_from_second_level and args.artifact_source_dir_skip1vr:
+        return args.artifact_source_dir_skip1vr
+    return args.artifact_source_dir
+
+
+def _select_prefill_files(
+    requested_files: Sequence[str], experiment: Experiment
+) -> List[str]:
+    requested = list(requested_files)
+
+    def keep_only(allowed: Sequence[str]) -> List[str]:
+        return [name for name in requested if name in allowed]
+
+    if experiment.name == "baseline":
+        return []
+    if experiment.resume_from_second_level:
+        return keep_only(DEFAULT_PREFILL_RESUME_FILES)
+    if experiment.skip_first_level:
+        return keep_only(DEFAULT_PREFILL_KEYWORDS_ONLY)
+    return []
+
+
 def _build_command(
     args: argparse.Namespace, experiment: Experiment, output_dir: Path
 ) -> List[str]:
@@ -400,17 +449,17 @@ def main() -> int:
         output_dir = results_root / _output_dir_name(args.output_prefix, experiment)
         output_dir.mkdir(parents=True, exist_ok=True)
 
-        prefill_source = args.artifact_source_dir
-        if experiment.resume_from_second_level and args.artifact_source_dir_skip1vr:
-            prefill_source = args.artifact_source_dir_skip1vr
+        prefill_source = _select_prefill_source(args, experiment)
+        prefill_files = _select_prefill_files(args.prefill_files, experiment)
+        completion = _summarize_experiment_completion(patient_ids, output_dir)
 
         copied_files: List[Dict[str, str]] = []
-        if prefill_source:
+        if prefill_source and prefill_files:
             copied_files = _copy_prefill_artifacts(
                 patient_ids=patient_ids,
                 source_root=Path(prefill_source).resolve(),
                 target_root=output_dir,
-                filenames=args.prefill_files,
+                filenames=prefill_files,
                 force=args.force_prefill,
             )
 
@@ -428,7 +477,10 @@ def main() -> int:
                     "output_dir": str(output_dir),
                     "status": status,
                     "copied_files": copied_files,
+                    "prefill_files": prefill_files,
                     "missing_resume_files": missing_resume_files,
+                    "completed_patients": completion["completed_patients"],
+                    "missing_patients": completion["missing_patients"],
                     "command": _build_command(args, experiment, output_dir),
                 }
                 cast_list = manifest["experiments"]
@@ -445,7 +497,10 @@ def main() -> int:
             "output_dir": str(output_dir),
             "status": "dry_run" if args.dry_run else "pending",
             "copied_files": copied_files,
+            "prefill_files": prefill_files,
             "missing_resume_files": missing_resume_files,
+            "completed_patients": completion["completed_patients"],
+            "missing_patients": completion["missing_patients"],
             "command": command,
         }
 
@@ -457,6 +512,11 @@ def main() -> int:
         print(f"Experiment: {experiment.name}")
         print(f"Output dir : {output_dir}")
         print(f"Command    : {' '.join(command)}")
+        print(f"Prefill files: {prefill_files if prefill_files else 'disabled'}")
+        if patient_ids:
+            print(
+                f"Completion : {len(completion['completed_patients'])}/{len(patient_ids)} patient(s) already finished"
+            )
         if copied_files:
             print(f"Prefill    : copied {len(copied_files)} files")
         if missing_resume_files:
@@ -464,6 +524,16 @@ def main() -> int:
 
         if args.dry_run:
             continue
+
+        if completion["is_complete"] and not args.force_rerun_completed:
+            entry["status"] = "skipped_complete"
+            print("Action     : skipped because all patients already have ranked_trials.json")
+            continue
+
+        if completion["completed_patients"] and completion["missing_patients"]:
+            print(
+                f"Action     : resuming unfinished experiment for {len(completion['missing_patients'])} remaining patient(s)"
+            )
 
         completed = subprocess.run(command, cwd=workdir, env=env, check=False)
         entry["returncode"] = completed.returncode

@@ -9,7 +9,7 @@ import traceback
 import urllib.error
 import urllib.request
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 
 DEFAULT_BASE_URL = "http://127.0.0.1:9220/v1"
@@ -181,6 +181,142 @@ def extract_json_block(text: str) -> Dict[str, Any]:
         return json.loads(match.group(0))
 
 
+def build_trial_criteria_for_cot(trial_data: Dict[str, Any]) -> str:
+    """Same criteria block shape as Matcher.pipeline.cot_reasoning.BatchTrialProcessor."""
+    crit = _join_text(trial_data.get("eligibility_criteria"))
+    if crit:
+        return f"Eligibility Criteria:\n{crit}"
+    return "No eligibility criteria provided."
+
+
+def format_cot_eligibility_prompts(
+    criteria_text_formatted: str, patient_profile: str
+) -> tuple[str, str]:
+    """Mirror cot_reasoning.py use_cot=True system + user messages (English)."""
+    system_msg = (
+        "You are a medical expert with advanced knowledge in clinical reasoning, diagnostics, and treatment planning. "
+        "Answer the following question. Before answering, create a concise chain of thoughts reasoning to ensure a logical and accurate response.\n"
+    )
+    user_msg = (
+        "Assess the given patient's eligibility for a clinical trial by evaluating each and every criterion individually.\n\n"
+        "### INCLUSION CRITERIA ASSESSMENT\n"
+        "For each inclusion criterion, classify it as one of:\n"
+        "- **Met:** The patient's data explicitly and unequivocally satisfies the criterion.\n"
+        "- **Not Met:** The patient's data explicitly and unequivocally contradicts or fails to satisfy the criterion.\n"
+        "- **Unclear:** Insufficient or missing patient data to verify.\n"
+        "- **Irrelevant:** The criterion does not apply to the patient's context.\n\n"
+        "### EXCLUSION CRITERIA ASSESSMENT\n"
+        "For each exclusion criterion, classify it as one of:\n"
+        "- **Violated:** The patient's data explicitly and unequivocally violates the criterion.\n"
+        "- **Not Violated:** The patient's data confirms compliance with the criterion.\n"
+        "- **Unclear:** Insufficient or missing patient data to verify.\n"
+        "- **Irrelevant:** The criterion does not apply to the patient's context.\n\n"
+        "### IMPORTANT INSTRUCTIONS\n"
+        "- Ensure all criteria are assessed one-by-one.\n"
+        "- Use **only** the provided patient data; **do not infer, assume, or extrapolate beyond the given information.**\n"
+        "- Justifications must be strictly based on direct evidence from the patient profile.\n"
+        "- Return exactly one JSON object and no extra prose, no markdown fences, and no leading or trailing commentary.\n"
+        "### RESPONSE FORMAT (STRICTLY FOLLOW)\n"
+        "{\n"
+        '  "Inclusion_Criteria_Evaluation": [\n'
+        '    {"Criterion": "Exact inclusion criterion text", "Classification": "Met | Not Met | Unclear | Irrelevant", "Justification": "Clear, evidence-based rationale using ONLY provided data"}\n'
+        "  ],\n"
+        '  "Exclusion_Criteria_Evaluation": [\n'
+        '    {"Criterion": "Exact exclusion criterion text", "Classification": "Violated | Not Violated | Unclear | Irrelevant", "Justification": "Clear, evidence-based rationale using ONLY provided data"}\n'
+        "  ],\n"
+        '  "Recap": "Concise summary of key qualifying/disqualifying factors",\n'
+        '  "Final Decision": "Eligible | Likely Eligible (leaning toward inclusion) | Likely Ineligible (leaning toward exclusion) | Ineligible"\n'
+        "}\n\n"
+        "### INPUT\n"
+        "---Start of Clinical Trial Criteria---\n"
+        f"{criteria_text_formatted}\n"
+        "---End of Clinical Trial Criteria---\n\n"
+        "----\n"
+        "---Start of Patient Description---\n"
+        f"{patient_profile}\n"
+        "Written informed consent has been obtained from the patient or their legal representative.\n"
+        "---End of Patient Description---\n"
+        "## IMPORTANT REMINDER:\n"
+        "NEVER make assumptions, inferences, or extrapolations beyond the explicitly stated patient information."
+    )
+    return system_msg, user_msg
+
+
+def _final_decision_to_match(final_decision: str) -> tuple[bool, float]:
+    s = (final_decision or "").strip().lower()
+    if "ineligible" in s and "likely" not in s:
+        return False, 0.15
+    if s.startswith("ineligible") or (
+        "likely ineligible" in s or "leaning toward exclusion" in s
+    ):
+        return False, 0.35
+    if "likely eligible" in s or "leaning toward inclusion" in s:
+        return True, 0.72
+    if s.startswith("eligible") or "eligible" == s:
+        return True, 0.92
+    return False, 0.4
+
+
+def map_cot_eligibility_json_to_match_assessment(
+    raw: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Map CoT eligibility JSON (cot_reasoning schema) to this script's assessment shape."""
+    recap = raw.get("Recap") or raw.get("recap") or ""
+    final = (
+        raw.get("Final Decision")
+        or raw.get("Final_Decision")
+        or raw.get("final_decision")
+        or ""
+    )
+    matched, score = _final_decision_to_match(str(final))
+
+    inc = raw.get("Inclusion_Criteria_Evaluation") or raw.get(
+        "inclusion_criteria_evaluation"
+    ) or []
+    exc = raw.get("Exclusion_Criteria_Evaluation") or raw.get(
+        "exclusion_criteria_evaluation"
+    ) or []
+
+    missing: List[str] = []
+    conflicts: List[str] = []
+
+    for item in inc:
+        if not isinstance(item, dict):
+            continue
+        cls = str(item.get("Classification") or item.get("classification") or "")
+        cls_l = cls.lower()
+        crit = item.get("Criterion") or item.get("criterion")
+        crit_s = str(crit).strip() if crit else ""
+        if "unclear" in cls_l and crit_s:
+            missing.append(crit_s)
+        if "not met" in cls_l and crit_s:
+            conflicts.append(f"Inclusion not met: {crit_s}")
+
+    for item in exc:
+        if not isinstance(item, dict):
+            continue
+        cls = str(item.get("Classification") or item.get("classification") or "")
+        cls_l = cls.lower()
+        crit = item.get("Criterion") or item.get("criterion")
+        crit_s = str(crit).strip() if crit else ""
+        if "unclear" in cls_l and crit_s:
+            missing.append(crit_s)
+        if "violated" in cls_l and crit_s:
+            conflicts.append(f"Exclusion violated: {crit_s}")
+
+    reason = str(recap).strip() if recap else str(final).strip()
+    return {
+        "matched": matched,
+        "match_score": score,
+        "reason": reason or "CoT eligibility assessment",
+        "missing_information": missing,
+        "conflicts": conflicts,
+        "use_cot_reasoning": True,
+        "final_decision": str(final).strip(),
+        "cot_eligibility": raw,
+    }
+
+
 class OpenAICompatClient:
     def __init__(
         self,
@@ -224,9 +360,16 @@ class OpenAICompatClient:
         enhanced["request_timeout"] = self.provider_timeout_seconds
         return enhanced
 
-    def chat_json(self, system_prompt: str, user_prompt: str) -> Dict[str, Any]:
+    def chat_json(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        *,
+        max_tokens: Optional[int] = None,
+        completions_suffix: str = "请只输出 JSON 对象，不要输出解释。",
+    ) -> Dict[str, Any]:
         chat_url = f"{self.base_url}/chat/completions"
-        payload = {
+        payload: Dict[str, Any] = {
             "model": self.model,
             "temperature": 0,
             "messages": [
@@ -235,6 +378,8 @@ class OpenAICompatClient:
             ],
             "response_format": {"type": "json_object"},
         }
+        if max_tokens is not None:
+            payload["max_tokens"] = max_tokens
         payload = self._with_timeout_hints(payload)
         try:
             data = self._post(chat_url, payload)
@@ -249,13 +394,14 @@ class OpenAICompatClient:
         prompt = (
             f"{system_prompt}\n\n"
             f"{user_prompt}\n\n"
-            "请只输出 JSON 对象，不要输出解释。"
+            f"{completions_suffix}"
         )
+        comp_max = max_tokens if max_tokens is not None else 1200
         payload = {
             "model": self.model,
             "temperature": 0,
             "prompt": prompt,
-            "max_tokens": 1200,
+            "max_tokens": comp_max,
         }
         payload = self._with_timeout_hints(payload)
         data = self._post(completion_url, payload)
@@ -302,14 +448,23 @@ def judge_trial_match_with_retry(
     retry_backoff_seconds: float,
     retry_max_backoff_seconds: float,
     verbose_errors: bool,
+    use_cot_reasoning: bool = False,
+    cot_max_tokens: int = 4000,
 ) -> Dict[str, Any]:
     trial_id = str(trial_data.get("nct_id") or trial_data.get("trial_id") or "")
     attempts = max_retries + 1
-    last_exc: Exception | None = None
+    last_exc: Optional[Exception] = None
 
     for attempt in range(1, attempts + 1):
         try:
-            return judge_trial_match(client, patient_id, patient_summary, trial_data)
+            return judge_trial_match(
+                client,
+                patient_id,
+                patient_summary,
+                trial_data,
+                use_cot_reasoning=use_cot_reasoning,
+                cot_max_tokens=cot_max_tokens,
+            )
         except Exception as exc:
             last_exc = exc
             if not is_retryable_error(exc) or attempt >= attempts:
@@ -340,8 +495,26 @@ def judge_trial_match(
     patient_id: str,
     patient_summary: Dict[str, Any],
     trial_data: Dict[str, Any],
+    *,
+    use_cot_reasoning: bool = False,
+    cot_max_tokens: int = 4000,
 ) -> Dict[str, Any]:
     trial_id = str(trial_data.get("nct_id") or trial_data.get("trial_id") or "")
+
+    if use_cot_reasoning:
+        criteria_fmt = build_trial_criteria_for_cot(trial_data)
+        system_prompt, user_prompt = format_cot_eligibility_prompts(
+            criteria_fmt, patient_summary["summary_text"]
+        )
+        raw = client.chat_json(
+            system_prompt,
+            user_prompt,
+            max_tokens=cot_max_tokens,
+            completions_suffix="Please output only a JSON object.",
+        )
+        result = map_cot_eligibility_json_to_match_assessment(raw)
+        result["trial_id"] = trial_id
+        return result
 
     system_prompt = (
         "你是临床试验匹配助手。"
@@ -552,6 +725,20 @@ def main() -> int:
         action="store_true",
         help="Print detailed traceback when API requests fail and retry.",
     )
+    parser.add_argument(
+        "--use-cot-reasoning",
+        action="store_true",
+        help=(
+            "Use English chain-of-thought eligibility prompts aligned with "
+            "source/Matcher/pipeline/cot_reasoning.py (trial eligibility_criteria + JSON schema)."
+        ),
+    )
+    parser.add_argument(
+        "--cot-max-tokens",
+        type=int,
+        default=4000,
+        help="max_tokens for chat/completions when --use-cot-reasoning is set (default: 4000).",
+    )
     args = parser.parse_args()
 
     trials_dir = Path(args.trials_dir)
@@ -654,6 +841,8 @@ def main() -> int:
                     retry_backoff_seconds=args.retry_backoff_seconds,
                     retry_max_backoff_seconds=args.retry_max_backoff_seconds,
                     verbose_errors=args.verbose_errors,
+                    use_cot_reasoning=args.use_cot_reasoning,
+                    cot_max_tokens=args.cot_max_tokens,
                 )
                 assessments.append(result)
             except Exception as exc:
