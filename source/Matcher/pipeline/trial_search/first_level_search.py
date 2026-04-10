@@ -109,6 +109,11 @@ _HYBRID_SCRIPT = _SAFE_COSINE + """
     return alpha * normalizedTextScore + beta * combinedVectorScore;
 """
 
+# Hybrid/vector scripts return exactly 0 when combinedVectorScore < vector_score_threshold.
+# Without min_score, those docs still appear in hits (sorted last). This floor drops them so
+# --max-trials-first-level is filled with threshold-passing trials only (when enough exist).
+_FIRST_LEVEL_MIN_SCORE_AFTER_VECTOR_THRESHOLD = 1e-9
+
 
 class EligibilityFilterBuild(NamedTuple):
     filters: List[dict]
@@ -682,9 +687,12 @@ class ClinicalTrialSearch:
             search_mode=mode,
         )
         try:
+            search_body: Dict[str, Any] = {"size": size, "query": query}
+            if mode in {"hybrid", "vector"}:
+                search_body["min_score"] = _FIRST_LEVEL_MIN_SCORE_AFTER_VECTOR_THRESHOLD
             response = with_retries(
                 lambda: self.es_client.search(
-                    index=self.index_name, body={"size": size, "query": query}
+                    index=self.index_name, body=search_body
                 ),
                 logger=logger,
                 action="ES trial search",
