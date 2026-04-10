@@ -1,0 +1,350 @@
+{
+  "id": "patient-breast-001",
+  "age": 47,
+  "gender": "FEMALE",
+  "subject": {
+    "id": "patient-breast-001",
+    "dateOfBirth": "1978-02-09",
+    "sex": "FEMALE",
+    "karyotypicSex": "XX",
+    "taxonomy": {
+      "id": "NCBITaxon:9606",
+      "label": "Homo sapiens"
+    },
+    "description": "47-year-old female with metastatic hormone receptor-positive, HER2-negative breast cancer previously treated with endocrine therapy.",
+    "timeAtLastEncounter": {
+      "age": {
+        "iso8601duration": "P47Y1M"
+      }
+    }
+  },
+  "phenotypicFeatures": [
+    {
+      "type": {
+        "id": "HP:0012378",
+        "label": "Fatigue"
+      },
+      "onset": {
+        "age": {
+          "iso8601duration": "P46Y8M"
+        }
+      },
+      "severity": {
+        "id": "HP:0012826",
+        "label": "Mild"
+      },
+      "description": "Ongoing cancer-related fatigue during systemic therapy."
+    },
+    {
+      "type": {
+        "id": "HP:0003002",
+        "label": "Breast carcinoma"
+      },
+      "onset": {
+        "age": {
+          "iso8601duration": "P45Y"
+        }
+      },
+      "description": "Initially diagnosed with invasive ductal carcinoma of the left breast."
+    },
+    {
+      "type": {
+        "id": "HP:0002664",
+        "label": "Neoplasm of the liver"
+      },
+      "onset": {
+        "age": {
+          "iso8601duration": "P46Y6M"
+        }
+      },
+      "description": "Liver lesions consistent with metastatic disease."
+    }
+  ],
+  "diseases": [
+    {
+      "term": {
+        "id": "MONDO:0007254",
+        "label": "Breast carcinoma"
+      },
+      "onset": {
+        "age": {
+          "iso8601duration": "P45Y"
+        }
+      },
+      "diseaseStage": [
+        {
+          "id": "NCIT:C28054",
+          "label": "Stage IV"
+        }
+      ],
+      "tnmFinding": [
+        {
+          "id": "NCIT:C48737",
+          "label": "T3"
+        },
+        {
+          "id": "NCIT:C48705",
+          "label": "N1"
+        },
+        {
+          "id": "NCIT:C48699",
+          "label": "M1"
+        }
+      ],
+      "description": "Metastatic estrogen receptor-positive, progesterone receptor-positive, HER2-negative breast carcinoma with liver involvement."
+    }
+  ],
+  "biosamples": [
+    {
+      "id": "biosample-breast-biopsy",
+      "individualId": "patient-breast-001",
+      "sampledTissue": {
+        "id": "UBERON:0000310",
+        "label": "breast"
+      },
+      "sampleType": {
+        "id": "NCIT:C15189",
+        "label": "Core biopsy specimen"
+      },
+      "timeOfCollection": {
+        "age": {
+          "iso8601duration": "P45Y"
+        }
+      },
+      "histologicalDiagnosis": {
+        "id": "NCIT:C4194",
+        "label": "Invasive ductal breast carcinoma"
+      },
+      "procedure": {
+        "code": {
+          "id": "NCIT:C51683",
+          "label": "Needle Biopsy"
+        }
+      },
+      "description": "Core needle biopsy of the primary breast lesion."
+    },
+    {
+      "id": "biosample-liver-biopsy",
+      "individualId": "patient-breast-001",
+      "sampledTissue": {
+        "id": "UBERON:0002107",
+        "label": "liver"
+      },
+      "sampleType": {
+        "id": "NCIT:C15189",
+        "label": "Core biopsy specimen"
+      },
+      "timeOfCollection": {
+        "age": {
+          "iso8601duration": "P46Y6M"
+        }
+      },
+      "histologicalDiagnosis": {
+        "id": "NCIT:C53502",
+        "label": "Metastatic carcinoma"
+      },
+      "description": "Biopsy of hepatic lesion confirmed metastatic breast carcinoma."
+    }
+  ],
+  "measurements": [
+    {
+      "assay": {
+        "id": "NCIT:C125949",
+        "label": "Cancer Antigen 15-3 Measurement"
+      },
+      "value": {
+        "value": 86.4,
+        "unit": {
+          "id": "UCUM:U/mL",
+          "label": "unit per milliliter"
+        }
+      },
+      "description": "Elevated CA 15-3 at progression assessment."
+    }
+  ],
+  "interpretations": [
+    {
+      "id": "interpretation-pik3ca-1",
+      "description": "Tumor profiling identified a PIK3CA mutation relevant to targeted treatment selection.",
+      "diagnosis": {
+        "disease": {
+          "id": "MONDO:0007254",
+          "label": "Breast carcinoma"
+        },
+        "diagnosisStatus": {
+          "id": "NCIT:C25626",
+          "label": "Confirmed"
+        },
+        "genomicInterpretations": [
+          {
+            "variantInterpretation": {
+              "variationDescriptor": {
+                "id": "HGVS:NC_000003.12:g.178936091A>G",
+                "label": "PIK3CA c.3140A>G",
+                "geneContext": {
+                  "valueId": "HGNC:8975",
+                  "symbol": "PIK3CA"
+                },
+                "molecularAttributes": {
+                  "aminoAcidChange": {
+                    "value": "p.His1047Arg"
+                  }
+                }
+              },
+              "therapeuticActionability": {
+                "id": "NCIT:C94217",
+                "label": "PI3K inhibitor sensitivity"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "medicalActions": [
+    {
+      "treatment": {
+        "agent": {
+          "id": "CHEBI:138499",
+          "label": "Fulvestrant"
+        },
+        "routeOfAdministration": {
+          "id": "NCIT:C38276",
+          "label": "Intramuscular"
+        },
+        "doseIntervals": [
+          {
+            "quantity": {
+              "unit": {
+                "id": "UCUM:mg",
+                "label": "milligram"
+              },
+              "value": 500
+            },
+            "scheduleFrequency": {
+              "id": "NCIT:C64496",
+              "label": "Monthly"
+            }
+          }
+        ]
+      },
+      "description": "Endocrine therapy administered for metastatic hormone receptor-positive disease."
+    },
+    {
+      "treatment": {
+        "agent": {
+          "id": "CHEBI:145372",
+          "label": "Palbociclib"
+        },
+        "routeOfAdministration": {
+          "id": "NCIT:C38288",
+          "label": "Oral"
+        },
+        "doseIntervals": [
+          {
+            "quantity": {
+              "unit": {
+                "id": "UCUM:mg",
+                "label": "milligram"
+              },
+              "value": 125
+            },
+            "scheduleFrequency": {
+              "id": "NCIT:C64575",
+              "label": "Daily"
+            }
+          }
+        ]
+      },
+      "description": "CDK4/6 inhibitor given in combination with endocrine therapy."
+    },
+    {
+      "procedure": {
+        "code": {
+          "id": "NCIT:C17204",
+          "label": "Magnetic Resonance Imaging"
+        },
+        "performed": "2026-02-18"
+      },
+      "description": "Restaging MRI showed interval increase in liver metastatic burden."
+    }
+  ],
+  "family": {
+    "id": "family-breast-001",
+    "proband": {
+      "id": "patient-breast-001"
+    },
+    "relatives": [
+      {
+        "id": "maternal-aunt",
+        "sex": "FEMALE",
+        "phenotypicFeatures": [
+          {
+            "type": {
+              "id": "HP:0003002",
+              "label": "Breast carcinoma"
+            },
+            "onset": {
+              "age": {
+                "iso8601duration": "P52Y"
+              }
+            }
+          }
+        ],
+        "vitalStatus": {
+          "status": "ALIVE"
+        },
+        "description": "Maternal aunt with a history of breast cancer."
+      }
+    ]
+  },
+  "files": [
+    {
+      "uri": "https://example.org/reports/patient-breast-001-pathology-report.pdf",
+      "fileAttribute": {
+        "attributeType": {
+          "id": "NCIT:C47885",
+          "label": "Pathology Report"
+        }
+      }
+    },
+    {
+      "uri": "https://example.org/reports/patient-breast-001-molecular-report.pdf",
+      "fileAttribute": {
+        "attributeType": {
+          "id": "NCIT:C16444",
+          "label": "Genomics Report"
+        }
+      }
+    }
+  ],
+  "metaData": {
+    "created": "2026-04-07T10:10:00Z",
+    "createdBy": "Codex Mock Generator",
+    "submittedBy": "Breast Oncology Unit",
+    "resources": [
+      {
+        "id": "hp",
+        "name": "Human Phenotype Ontology",
+        "namespacePrefix": "HP",
+        "url": "http://purl.obolibrary.org/obo/hp.owl",
+        "version": "2023-04-08"
+      },
+      {
+        "id": "mondo",
+        "name": "MONDO Disease Ontology",
+        "namespacePrefix": "MONDO",
+        "url": "http://purl.obolibrary.org/obo/mondo.owl",
+        "version": "2023-03-01"
+      },
+      {
+        "id": "ncit",
+        "name": "NCI Thesaurus",
+        "namespacePrefix": "NCIT",
+        "url": "http://purl.obolibrary.org/obo/ncit.owl",
+        "version": "23.03d"
+      }
+    ],
+    "phenopacketSchemaVersion": "2.0"
+  }
+}

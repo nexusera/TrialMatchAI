@@ -36,7 +36,9 @@ Usage:
 
 MODE (default: all):
   all, both     Copy trials + criteria; index both
+                  (before trials copy: each ID must have SRC_CRITERIA/<NCT>/; aborts if missing)
   trials        Copy data/processed_trials/*.json subset only; index trials
+                  (each ID must have SRC_CRITERIA/<NCT>/; script exits immediately if missing)
   criteria      Copy data/processed_criteria/<NCT>/ subtrees only; index criteria
 
 Options:
@@ -72,6 +74,30 @@ restore_processed_ids() {
 }
 
 trap restore_processed_ids EXIT
+
+# Before copying trial JSONs, ensure each listed ID has processed criteria (directory per NCT).
+require_criteria_for_listed_trials() {
+  info "Checking processed criteria exist for every ID in $IDS_FILE (under $SRC_CRITERIA)"
+  while IFS= read -r line || [[ -n "${line:-}" ]]; do
+    line="$(echo "$line" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | tr -d '\r')"
+    [[ -z "$line" || "$line" =~ ^# ]] && continue
+    local trial_id="$line"
+    local crit_dir="$SRC_CRITERIA/$trial_id"
+    if [[ ! -d "$crit_dir" ]]; then
+      echo "" >&2
+      echo "================================================================" >&2
+      echo "  FATAL: trial subset aborted — CRITERIA MISSING for this NCT id" >&2
+      echo "================================================================" >&2
+      echo "  trial_id:     $trial_id" >&2
+      echo "  expected_dir: $crit_dir" >&2
+      echo "  ids_file:     $IDS_FILE" >&2
+      echo "  src_criteria: $SRC_CRITERIA" >&2
+      echo "================================================================" >&2
+      echo "" >&2
+      exit 1
+    fi
+  done < "$IDS_FILE"
+}
 
 copy_trials_subset() {
   local missing=0
@@ -207,6 +233,7 @@ info "Mode=$MODE  out_root=$OUT_ROOT  ids=$(wc -l <"$IDS_FILE" | tr -d ' ') line
 info "OUT_TRIALS=$OUT_TRIALS  OUT_CRITERIA=$OUT_CRITERIA"
 
 if [[ "$DO_TRIALS" -eq 1 ]]; then
+  require_criteria_for_listed_trials
   copy_trials_subset
 fi
 if [[ "$DO_CRITERIA" -eq 1 ]]; then
