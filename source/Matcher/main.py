@@ -125,8 +125,17 @@ def run_first_level_search(
 
     write_text_file([str(nid) for nid in nct_ids], f"{output_folder}/nct_ids.txt")
     write_json_file(first_level_scores, f"{output_folder}/first_level_scores.json")
+    ranked_lines = ["nct_id\tscore"] + [
+        f"{nid}\t{first_level_scores[nid]:.8g}"
+        for nid in nct_ids
+        if nid in first_level_scores
+    ]
+    write_text_file(ranked_lines, f"{output_folder}/first_level_ranked.tsv")
 
-    logger.info(f"First-level search complete: {len(nct_ids)} trial IDs saved.")
+    logger.info(
+        f"First-level search complete: {len(nct_ids)} trial IDs saved "
+        f"(scores: first_level_scores.json, first_level_ranked.tsv)."
+    )
     return (
         nct_ids,
         main_conditions,
@@ -134,6 +143,57 @@ def run_first_level_search(
         expanded_sentences,
         first_level_scores,
     )
+
+
+def _write_second_level_trial_score_artifacts(
+    output_folder: str,
+    second_level_mode: str,
+    *,
+    top_n: int,
+    num_top_txt: int,
+    trials_ranked_by_combined: List[Dict[str, Any]],
+) -> None:
+    """Persist trial-level second-stage scores (aligned with run_second_level_search)."""
+    payload = {
+        "second_level_search_mode": second_level_mode,
+        "max_trials_second_level_cap": top_n,
+        "num_lines_written_to_top_trials_txt": num_top_txt,
+        "trials_ranked_by_combined": trials_ranked_by_combined,
+    }
+    json_path = f"{output_folder}/second_level_trial_scores.json"
+    write_json_file(payload, json_path)
+    header = (
+        "rank_combined\tnct_id\tfirst_level_score\tsecond_level_score\t"
+        "combined_score\trank_second_level\tselected_for_top_trials_txt"
+    )
+    lines = [header]
+    for row in trials_ranked_by_combined:
+        r2 = row.get("rank_second_level")
+        r2s = "" if r2 is None else str(r2)
+        lines.append(
+            f"{row['rank_combined']}\t{row['nct_id']}\t{row['first_level_score']:.8g}\t"
+            f"{row['second_level_score']:.8g}\t{row['combined_score']:.8g}\t{r2s}\t"
+            f"{row['selected_for_top_trials_txt']}"
+        )
+    write_text_file(lines, f"{output_folder}/second_level_trial_scores.tsv")
+
+    # Same order as top_trials.txt (first num_top_txt rows by combined rank).
+    top_lines = [
+        "rank_in_top_trials\tnct_id\tsecond_level_score\tfirst_level_score\t"
+        "combined_score\trank_second_level\trank_combined"
+    ]
+    top_slice = (
+        trials_ranked_by_combined[:num_top_txt] if num_top_txt > 0 else []
+    )
+    for i, row in enumerate(top_slice, start=1):
+        r2 = row.get("rank_second_level")
+        r2s = "" if r2 is None else str(r2)
+        top_lines.append(
+            f"{i}\t{row['nct_id']}\t{row['second_level_score']:.8g}\t"
+            f"{row['first_level_score']:.8g}\t{row['combined_score']:.8g}\t{r2s}\t"
+            f"{row['rank_combined']}"
+        )
+    write_text_file(top_lines, f"{output_folder}/top_trials_scored.tsv")
 
 
 def run_second_level_search(
@@ -153,12 +213,26 @@ def run_second_level_search(
     if not nct_ids:
         logger.warning("No candidate trial IDs available; skipping second-level search.")
         write_text_file([], top_trials_path)
+        _write_second_level_trial_score_artifacts(
+            output_folder,
+            second_level_mode,
+            top_n=0,
+            num_top_txt=0,
+            trials_ranked_by_combined=[],
+        )
         return [], top_trials_path
 
     queries = list(set(main_conditions + other_conditions + expanded_sentences))[:10]
     if not queries:
         logger.warning("No search queries available; skipping second-level search.")
         write_text_file([], top_trials_path)
+        _write_second_level_trial_score_artifacts(
+            output_folder,
+            second_level_mode,
+            top_n=0,
+            num_top_txt=0,
+            trials_ranked_by_combined=[],
+        )
         return [], top_trials_path
     if second_level_mode == "all_rerank":
         logger.info(
@@ -181,20 +255,63 @@ def run_second_level_search(
         queries, nct_ids, top_n=top_n
     )
 
-    combined_scores = {}
+    combined_scores: Dict[str, float] = {}
     for trial in second_level_results:
         trial_id = trial["nct_id"]
-        second_score = trial["score"]
-        first_score = first_level_scores.get(trial_id, 0)
+        second_score = float(trial["score"])
+        try:
+            first_score = float(first_level_scores.get(trial_id, 0))
+        except (TypeError, ValueError):
+            first_score = 0.0
         combined_scores[trial_id] = first_score + second_score
 
     sorted_trials = sorted(combined_scores.items(), key=lambda x: x[1], reverse=True)
     num_top = max(1, min(len(sorted_trials) // 3, top_n))
     semi_final_trials = sorted_trials[:num_top]
+    selected_ids = {trial_id for trial_id, _ in semi_final_trials}
+
+    rank_second_level = {
+        str(t["nct_id"]): idx for idx, t in enumerate(second_level_results, start=1)
+    }
+    second_level_only = {
+        str(t["nct_id"]): float(t["score"]) for t in second_level_results
+    }
+
+    trials_ranked_by_combined: List[Dict[str, Any]] = []
+    for rank_c, (trial_id, combined) in enumerate(sorted_trials, start=1):
+        tid = str(trial_id)
+        try:
+            fs = float(first_level_scores.get(tid, 0))
+        except (TypeError, ValueError):
+            fs = 0.0
+        ss = float(second_level_only.get(tid, 0.0))
+        trials_ranked_by_combined.append(
+            {
+                "rank_combined": rank_c,
+                "rank_second_level": rank_second_level.get(tid),
+                "nct_id": tid,
+                "first_level_score": fs,
+                "second_level_score": ss,
+                "combined_score": float(combined),
+                "selected_for_top_trials_txt": tid in selected_ids,
+            }
+        )
 
     write_text_file([trial_id for trial_id, _ in semi_final_trials], top_trials_path)
 
-    logger.info("Second-level retrieval and ranking complete. Top trials saved.")
+    _write_second_level_trial_score_artifacts(
+        output_folder,
+        second_level_mode,
+        top_n=top_n,
+        num_top_txt=len(semi_final_trials),
+        trials_ranked_by_combined=trials_ranked_by_combined,
+    )
+
+    logger.info(
+        "Second-level retrieval and ranking complete. Top trials saved; "
+        "scores: second_level_trial_scores.json/.tsv (all stage-2 candidates), "
+        "top_trials_scored.tsv (same order as top_trials.txt)."
+    )
     return semi_final_trials, top_trials_path
 
 
@@ -500,7 +617,19 @@ examples:
         "--vector-score-threshold",
         type=float,
         default=None,
-        help="Minimum vector similarity score for first-level search (default: 0.5)",
+        help=(
+            "First-level (trial index): minimum combined vector score in hybrid/vector "
+            "script_score (default: 0.5)"
+        ),
+    )
+    search.add_argument(
+        "--second-level-vector-score-threshold",
+        type=float,
+        default=None,
+        help=(
+            "Second-level (criteria index): minimum normalized cosine score for vector/hybrid "
+            "script_score (default: 0.5)"
+        ),
     )
     search.add_argument(
         "--max-trials-first-level",
@@ -651,6 +780,10 @@ def apply_cli_overrides(config: Dict[str, Any], args: argparse.Namespace) -> Dic
     # ── search ──
     if args.vector_score_threshold is not None:
         config["search"]["vector_score_threshold"] = args.vector_score_threshold
+    if args.second_level_vector_score_threshold is not None:
+        config["search"]["second_level_vector_score_threshold"] = (
+            args.second_level_vector_score_threshold
+        )
     if args.max_trials_first_level is not None:
         config["search"]["max_trials_first_level"] = args.max_trials_first_level
     if args.max_trials_second_level is not None:
@@ -765,6 +898,9 @@ def main_pipeline(config: Dict[str, Any]):
         bio_med_ner=bio_med_ner,
         search_mode=config.get("search", {}).get(
             "second_level_search_mode", "hybrid"
+        ),
+        second_level_vector_score_threshold=config.get("search", {}).get(
+            "second_level_vector_score_threshold", 0.5
         ),
     )
 

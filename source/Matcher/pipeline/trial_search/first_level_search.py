@@ -511,7 +511,9 @@ class ClinicalTrialSearch:
             zip(trials, scores), key=lambda x: x[1], reverse=True
         )
         top_x_percent_index = int(len(trials_with_scores) * 1.0)
-        trials = [trial for trial, score in trials_with_scores[:top_x_percent_index]]
+        sliced = trials_with_scores[:top_x_percent_index]
+        trials = [trial for trial, score in sliced]
+        scores = [score for trial, score in sliced]
         logger.info(
             f"[{mode}] Found {len(trials)} trials matching the search criteria."
         )

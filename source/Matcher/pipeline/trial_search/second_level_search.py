@@ -48,6 +48,7 @@ class SecondStageRetriever:
         exclusion_weight: float = 0.25,
         bio_med_ner=None,
         search_mode: str = "hybrid",
+        second_level_vector_score_threshold: float = 0.5,
     ):
         self.es_client = es_client
         self.llm_reranker = llm_reranker  # Can be None
@@ -58,6 +59,9 @@ class SecondStageRetriever:
         self.exclusion_weight = exclusion_weight
         self.bio_med_ner = bio_med_ner
         self.search_mode = search_mode.lower() if search_mode else "hybrid"
+        self.second_level_vector_score_threshold = float(
+            second_level_vector_score_threshold
+        )
 
     def retrieve_all_criteria(self, nct_ids: List[str]) -> List[Dict]:
         """Load all criteria documents for the candidate trials without query-time retrieval."""
@@ -254,7 +258,9 @@ class SecondStageRetriever:
                             """,
                                 "params": {
                                     "query_vector": query_vector,
-                                    "vector_score_threshold": 0.5,
+                                    "vector_score_threshold": (
+                                        self.second_level_vector_score_threshold
+                                    ),
                                 },
                             },
                         }
@@ -339,7 +345,9 @@ class SecondStageRetriever:
                             """,
                             "params": {
                                 "query_vector": query_vector,
-                                "vector_score_threshold": 0.5,
+                                "vector_score_threshold": (
+                                    self.second_level_vector_score_threshold
+                                ),
                             },
                         },
                     }

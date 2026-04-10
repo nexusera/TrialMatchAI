@@ -155,7 +155,16 @@ def _parse_args() -> argparse.Namespace:
         "--vector-score-threshold",
         type=float,
         default=0.3,
-        help="Vector similarity threshold.",
+        help="First-level (trial index) vector threshold passed to Matcher.main.",
+    )
+    parser.add_argument(
+        "--second-level-vector-score-threshold",
+        type=float,
+        default=0.5,
+        help=(
+            "Second-level (criteria index) vector threshold passed to Matcher.main "
+            "(default: 0.5)."
+        ),
     )
     parser.add_argument(
         "--max-trials-rag",
@@ -392,6 +401,8 @@ def _build_command(
         str(args.tensor_parallel_size),
         "--vector-score-threshold",
         str(args.vector_score_threshold),
+        "--second-level-vector-score-threshold",
+        str(args.second_level_vector_score_threshold),
         "--trials-json-folder",
         str(Path(args.trials_json_folder)),
         "--max-trials-rag",

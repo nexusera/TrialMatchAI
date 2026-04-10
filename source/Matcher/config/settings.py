@@ -83,6 +83,7 @@ class EmbedderSettings(BaseModel):
 
 class SearchSettings(BaseModel):
     vector_score_threshold: float = Field(0.5, ge=0.0, le=1.0)
+    second_level_vector_score_threshold: float = Field(0.5, ge=0.0, le=1.0)
     max_trials_first_level: int = Field(300, ge=1)
     max_trials_second_level: int = Field(100, ge=1)
     skip_first_level: bool = False
