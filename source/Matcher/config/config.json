@@ -73,6 +73,7 @@
     "skip_first_level": false,
     "resume_from_second_level": false,
     "second_level_search_mode": "hybrid",
+    "second_level_criteria_hits_per_query": 250,
     "explain_first_level_filter_misses": false
   },
   "use_cot_reasoning": true,

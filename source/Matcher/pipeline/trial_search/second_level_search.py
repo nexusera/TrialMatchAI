@@ -19,16 +19,40 @@ logger = setup_logging(__name__)
 _MAX_NCT_TERMS_PER_CLAUSE = 60000
 
 
+def _unique_normalized_nct_ids(nct_ids: List[str]) -> List[str]:
+    """Strip, uppercase, dedupe for ``terms`` on keyword ``nct_id`` (case-sensitive)."""
+    out: List[str] = []
+    seen: Set[str] = set()
+    for nid in nct_ids:
+        key = str(nid).strip().upper()
+        if key and key not in seen:
+            seen.add(key)
+            out.append(key)
+    return out
+
+
 def _nct_id_filter_clause(nct_ids: List[str]) -> Dict:
     """Filter by nct_id. Empty list matches nothing. Non-empty list must be
     length <= _MAX_NCT_TERMS_PER_CLAUSE (callers batch larger lists)."""
-    if not nct_ids:
+    normalized = _unique_normalized_nct_ids(nct_ids)
+    if not normalized:
         return {"bool": {"must_not": {"match_all": {}}}}
-    if len(nct_ids) > _MAX_NCT_TERMS_PER_CLAUSE:
+    if len(normalized) > _MAX_NCT_TERMS_PER_CLAUSE:
         raise ValueError(
-            f"nct_id filter has {len(nct_ids)} terms; max {_MAX_NCT_TERMS_PER_CLAUSE}"
+            f"nct_id filter has {len(normalized)} terms; max {_MAX_NCT_TERMS_PER_CLAUSE}"
         )
-    return {"terms": {"nct_id": nct_ids}}
+    return {"terms": {"nct_id": normalized}}
+
+
+def _parse_hits_total(resp: Dict) -> tuple[Optional[int], str]:
+    raw = resp.get("hits", {}).get("total")
+    if raw is None:
+        return None, "eq"
+    if isinstance(raw, dict):
+        return raw.get("value"), str(raw.get("relation", "eq"))
+    if isinstance(raw, int):
+        return raw, "eq"
+    return None, "eq"
 
 
 def _merge_hits_by_score(hits: List[Dict], size: int) -> List[Dict]:
@@ -39,7 +63,13 @@ def _merge_hits_by_score(hits: List[Dict], size: int) -> List[Dict]:
 def nct_ids_without_criterion_hits(
     candidate_nct_ids: List[str], all_criteria: List[Dict]
 ) -> List[str]:
-    """NCT IDs from the candidate list that never appear on any criterion hit."""
+    """NCT IDs from the candidate list that never appear on any criterion hit.
+
+    For ``all_rerank``, hits include all indexed criteria for those trials (nct_id filter
+    only). For ``hybrid`` / ``bm25`` / ``vector``, a trial is listed here if none of its
+    criteria survived text retrieval *and* per-query top-``size`` truncation for any
+    patient query — eligibility docs may still exist in Elasticsearch.
+    """
     seen: Set[str] = set()
     for hit in all_criteria:
         src = hit.get("_source")
@@ -94,7 +124,14 @@ class SecondStageRetriever:
         )
 
     def retrieve_all_criteria(self, nct_ids: List[str]) -> List[Dict]:
-        """Load all criteria documents for the candidate trials without query-time retrieval."""
+        """Load all criteria documents for the candidate trials without query-time retrieval.
+
+        Uses the Search Scroll API so results are not cut off at
+        ``index.max_result_window`` (default 10000), which breaks plain ``from``/``size``
+        pagination. Implemented with explicit ``search``/``scroll`` calls for
+        elasticsearch-py 8.x (``helpers.scan`` passes query bodies incompatibly with
+        ``Elasticsearch.search()`` in recent versions).
+        """
         if not nct_ids:
             return []
 
@@ -103,29 +140,74 @@ class SecondStageRetriever:
             for i in range(0, len(nct_ids), _MAX_NCT_TERMS_PER_CLAUSE)
         ]
         all_hits: List[Dict] = []
-        page_size = 1000
+        batch_size = 1000
 
         for filt in filters:
-            from_offset = 0
-            while True:
-                body = {
-                    "from": from_offset,
-                    "size": page_size,
-                    "query": {"bool": {"filter": filt}},
-                }
-                response = with_retries(
-                    lambda b=body: self.es_client.search(index=self.index_name, body=b),
+            batch_start = len(all_hits)
+            scroll_id: Optional[str] = None
+            try:
+                resp = with_retries(
+                    lambda: self.es_client.search(
+                        index=self.index_name,
+                        query={"bool": {"filter": filt}},
+                        size=batch_size,
+                        scroll="2m",
+                        track_total_hits=True,
+                    ),
                     logger=logger,
-                    action="ES criteria full scan",
+                    action="ES criteria full scan (open scroll)",
                 )
-                hits = response["hits"]["hits"]
+                total_val, total_rel = _parse_hits_total(resp)
+                scroll_id = resp.get("_scroll_id")
+                hits = resp["hits"]["hits"]
                 all_hits.extend(hits)
-                if len(hits) < page_size:
-                    break
-                from_offset += page_size
+
+                while scroll_id:
+                    sid = scroll_id
+                    resp = with_retries(
+                        lambda sid=sid: self.es_client.scroll(
+                            scroll_id=sid,
+                            scroll="2m",
+                        ),
+                        logger=logger,
+                        action="ES criteria full scan (scroll)",
+                    )
+                    scroll_id = resp.get("_scroll_id")
+                    hits = resp["hits"]["hits"]
+                    if not hits:
+                        break
+                    all_hits.extend(hits)
+
+                collected = len(all_hits) - batch_start
+                if total_val is not None and total_rel == "eq" and collected != total_val:
+                    logger.warning(
+                        "[%s] Criteria scroll length mismatch: ES total=%s collected=%s "
+                        "(index=%s)",
+                        self.search_mode,
+                        total_val,
+                        collected,
+                        self.index_name,
+                    )
+                else:
+                    logger.info(
+                        "[%s] Criteria batch: ES reported hits total=%s (%s), "
+                        "collected=%s (scroll)",
+                        self.search_mode,
+                        total_val,
+                        total_rel,
+                        collected,
+                    )
+            finally:
+                if scroll_id:
+                    try:
+                        self.es_client.clear_scroll(scroll_id=scroll_id)
+                    except Exception:
+                        logger.debug(
+                            "clear_scroll failed after criteria scan", exc_info=True
+                        )
 
         logger.info(
-            "[%s] Loaded %s criteria documents across %s candidate trials",
+            "[%s] Loaded %s criteria documents total for %s candidate trial id(s)",
             self.search_mode,
             len(all_hits),
             len(nct_ids),

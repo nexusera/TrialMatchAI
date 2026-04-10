@@ -90,6 +90,10 @@ class SearchSettings(BaseModel):
     skip_first_level: bool = False
     resume_from_second_level: bool = False
     second_level_search_mode: str = "hybrid"
+    second_level_criteria_hits_per_query: int = Field(
+        250,
+        ge=1,
+    )
     explain_first_level_filter_misses: bool = False
 
     @field_validator("second_level_search_mode")

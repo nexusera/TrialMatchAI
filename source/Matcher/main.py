@@ -690,6 +690,16 @@ examples:
         ),
     )
     search.add_argument(
+        "--second-level-criteria-hits-per-query",
+        type=int,
+        default=None,
+        help=(
+            "hybrid/bm25/vector only: max ES criterion hits kept per patient query across "
+            "all candidate trials (default: 250). Increase when many first-stage trials "
+            "have eligibility in the index but rarely appear in top-K retrieval."
+        ),
+    )
+    search.add_argument(
         "--max-trials-first-level",
         type=int,
         default=None,
@@ -856,6 +866,10 @@ def apply_cli_overrides(config: Dict[str, Any], args: argparse.Namespace) -> Dic
         config["search"]["second_level_aggregate_score_threshold"] = (
             args.second_level_aggregate_score_threshold
         )
+    if args.second_level_criteria_hits_per_query is not None:
+        config["search"]["second_level_criteria_hits_per_query"] = (
+            args.second_level_criteria_hits_per_query
+        )
     if args.max_trials_first_level is not None:
         config["search"]["max_trials_first_level"] = args.max_trials_first_level
     if args.max_trials_second_level is not None:
@@ -964,21 +978,28 @@ def main_pipeline(config: Dict[str, Any]):
     if not ensure_elasticsearch(es_client, config):
         return
 
+    _sl_mode = config.get("search", {}).get("second_level_search_mode", "hybrid")
     gemma_retriever = SecondStageRetriever(
         es_client=es_client,
         llm_reranker=llm_reranker,
         embedder=embedder,
         index_name=config["elasticsearch"]["index_trials_eligibility"],
+        size=int(config.get("search", {}).get("second_level_criteria_hits_per_query", 250)),
         bio_med_ner=bio_med_ner,
-        search_mode=config.get("search", {}).get(
-            "second_level_search_mode", "hybrid"
-        ),
+        search_mode=_sl_mode,
         second_level_vector_score_threshold=config.get("search", {}).get(
             "second_level_vector_score_threshold", 0.5
         ),
         second_level_aggregate_score_threshold=config.get("search", {}).get(
             "second_level_aggregate_score_threshold", 0.5
         ),
+    )
+    logger.info(
+        "Second-stage retriever: eligibility_index=%s second_level_search_mode=%s "
+        "criteria_hits_per_query=%s (latter applies to hybrid/bm25/vector only)",
+        config["elasticsearch"]["index_trials_eligibility"],
+        _sl_mode,
+        int(config.get("search", {}).get("second_level_criteria_hits_per_query", 250)),
     )
 
     patient_folder = Path(paths["patients_dir"])
