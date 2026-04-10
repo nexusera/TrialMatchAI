@@ -370,6 +370,8 @@ def embed_and_prepare(doc: dict, embedder: SentenceEmbedder) -> dict:
         if val is not None:
             yrs = age_to_years(val)
             if yrs is not None:
+                if key == "maximum_age" and yrs <= 0:
+                    continue
                 out[key] = yrs
 
     if "minimum_age" not in out or "maximum_age" not in out:
@@ -377,7 +379,7 @@ def embed_and_prepare(doc: dict, embedder: SentenceEmbedder) -> dict:
         min_age, max_age = extract_ages_from_criteria(criteria)
         if min_age is not None and "minimum_age" not in out:
             out["minimum_age"] = min_age
-        if max_age is not None and "maximum_age" not in out:
+        if max_age is not None and max_age > 0 and "maximum_age" not in out:
             out["maximum_age"] = max_age
 
     # --- ECOG score (bonus metadata) ---

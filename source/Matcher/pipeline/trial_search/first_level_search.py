@@ -11,6 +11,10 @@ from elasticsearch.helpers import scan
 
 logger = setup_logging(__name__)
 
+# Indexed trials often carry maximum_age=0 (or negative) as a placeholder when the
+# source registry has no upper bound. Treat as unbounded for ES and diagnostics.
+# Genuine pediatric upper limits are typically >= 1 year.
+
 # Helper that returns 0.0 when the doc is missing a vector field instead of
 # crashing with a Painless runtime error.
 _SAFE_COSINE = (
@@ -173,6 +177,7 @@ def build_eligibility_filters(
                             "bool": {
                                 "should": [
                                     {"range": {"maximum_age": {"gte": patient_age_int}}},
+                                    {"range": {"maximum_age": {"lte": 0}}},
                                     {
                                         "bool": {
                                             "must_not": {
@@ -238,7 +243,7 @@ def _diagnose_trial_filter_miss(
         if mx is not None and mx != "":
             try:
                 mxf = float(mx)
-                if mxf < pa:
+                if mxf > 0 and mxf < pa:
                     reasons.append(
                         f"年龄上限: 试验 maximum_age={mxf:g} < 用于 filter 的患者年龄 {pa}"
                     )
