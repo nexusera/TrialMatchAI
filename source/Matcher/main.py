@@ -42,6 +42,7 @@ from Matcher.utils.file_utils import (
 )
 from Matcher.schemas.phenopacket import Keywords, Phenopacket
 from Matcher.utils.logging_config import reset_request_id, set_request_id, setup_logging
+from Matcher.utils.temporal_utils import infer_patient_age_years_from_phenopacket
 from Matcher.utils.timing import log_timing
 
 logger = setup_logging(__name__)
@@ -116,7 +117,8 @@ def run_first_level_search(
             return None
         age_for_query = _parsed_age
     else:
-        age_for_query = 0
+        # Unknown age must not become 0 — that enables minimum_age filters and drops adult trials.
+        age_for_query = None
 
     search_size = config["search"].get("max_trials_first_level", 300)
     trials, scores = cts.search_trials(
@@ -1033,6 +1035,11 @@ def main_pipeline(config: Dict[str, Any]):
             patient_info["split_raw_description"] = keywords.get(
                 "expanded_sentences", []
             )
+            _raw_age = patient_info.get("age")
+            if _raw_age in (None, "", "all", "ALL", "All"):
+                _inferred = infer_patient_age_years_from_phenopacket(patient_info)
+                if _inferred is not None:
+                    patient_info["age"] = _inferred
 
             if resume_from_second_level:
                 top_trials_path = str(output_folder / "top_trials.txt")

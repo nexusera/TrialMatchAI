@@ -292,12 +292,15 @@ def explain_first_level_filter_misses(
     """Compare index vs filter-only pass set vs hybrid top-K; write-oriented payload."""
     retrieved: Set[str] = {str(x) for x in retrieved_nct_ids if x}
 
+    # scan()'s `query` is copied into client.search(**kwargs). A bare {"match_all": {}}
+    # would become invalid kwargs (match_all=...). Pass Query DSL under "query".
+    _src_fields = ["nct_id", "minimum_age", "maximum_age", "gender", "overall_status"]
     all_sources: Dict[str, Dict[str, Any]] = {}
     for hit in scan(
         es_client,
         index=index_name,
-        query={"match_all": {}},
-        _source=["nct_id", "minimum_age", "maximum_age", "gender", "overall_status"],
+        query={"query": {"match_all": {}}},
+        source_includes=_src_fields,
         size=500,
     ):
         src = hit.get("_source") or {}
@@ -306,11 +309,14 @@ def explain_first_level_filter_misses(
             all_sources[str(nid)] = src
 
     filter_pass: Set[str] = set()
+    inner_q: Dict[str, Any] = (
+        {"bool": {"filter": fb.filters}} if fb.filters else {"match_all": {}}
+    )
     for hit in scan(
         es_client,
         index=index_name,
-        query={"bool": {"filter": fb.filters}} if fb.filters else {"match_all": {}},
-        _source=["nct_id"],
+        query={"query": inner_q},
+        source_includes=["nct_id"],
         size=500,
     ):
         src = hit.get("_source") or {}
@@ -498,7 +504,7 @@ class ClinicalTrialSearch:
         self,
         synonyms: List[str],
         embeddings: Dict[str, List[float]],
-        age: int,
+        age: Optional[int],
         sex: str,
         overall_status: Optional[str],
         max_text_score: float,
@@ -661,7 +667,7 @@ class ClinicalTrialSearch:
         query = self.create_query(
             primary_synonyms,
             embeddings,
-            age if age is not None else 0,
+            age,
             sex,
             overall_status,
             max_text_score,
@@ -692,7 +698,7 @@ class ClinicalTrialSearch:
                 bm25_query = self.create_query(
                     primary_synonyms,
                     embeddings={},
-                    age=age if age is not None else 0,
+                    age=age,
                     sex=sex,
                     overall_status=overall_status,
                     max_text_score=1.0,
