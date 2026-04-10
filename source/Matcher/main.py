@@ -671,6 +671,16 @@ examples:
         ),
     )
     search.add_argument(
+        "--second-level-aggregate-score-threshold",
+        type=float,
+        default=None,
+        help=(
+            "Second-level: minimum per-criterion llm_score (after inclusion/exclusion weights) "
+            "to count toward aggregate_to_trials per trial (default: 0.5). Lower values keep "
+            "more trials after rerank."
+        ),
+    )
+    search.add_argument(
         "--max-trials-first-level",
         type=int,
         default=None,
@@ -833,6 +843,10 @@ def apply_cli_overrides(config: Dict[str, Any], args: argparse.Namespace) -> Dic
         config["search"]["second_level_vector_score_threshold"] = (
             args.second_level_vector_score_threshold
         )
+    if args.second_level_aggregate_score_threshold is not None:
+        config["search"]["second_level_aggregate_score_threshold"] = (
+            args.second_level_aggregate_score_threshold
+        )
     if args.max_trials_first_level is not None:
         config["search"]["max_trials_first_level"] = args.max_trials_first_level
     if args.max_trials_second_level is not None:
@@ -952,6 +966,9 @@ def main_pipeline(config: Dict[str, Any]):
         ),
         second_level_vector_score_threshold=config.get("search", {}).get(
             "second_level_vector_score_threshold", 0.5
+        ),
+        second_level_aggregate_score_threshold=config.get("search", {}).get(
+            "second_level_aggregate_score_threshold", 0.5
         ),
     )
 

@@ -67,6 +67,7 @@
   "search": {
     "vector_score_threshold": 0.5,
     "second_level_vector_score_threshold": 0.5,
+    "second_level_aggregate_score_threshold": 0.5,
     "max_trials_first_level": 300,
     "max_trials_second_level": 100,
     "skip_first_level": false,

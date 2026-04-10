@@ -49,6 +49,7 @@ class SecondStageRetriever:
         bio_med_ner=None,
         search_mode: str = "hybrid",
         second_level_vector_score_threshold: float = 0.5,
+        second_level_aggregate_score_threshold: float = 0.5,
     ):
         self.es_client = es_client
         self.llm_reranker = llm_reranker  # Can be None
@@ -61,6 +62,9 @@ class SecondStageRetriever:
         self.search_mode = search_mode.lower() if search_mode else "hybrid"
         self.second_level_vector_score_threshold = float(
             second_level_vector_score_threshold
+        )
+        self.second_level_aggregate_score_threshold = float(
+            second_level_aggregate_score_threshold
         )
 
     def retrieve_all_criteria(self, nct_ids: List[str]) -> List[Dict]:
@@ -556,7 +560,9 @@ class SecondStageRetriever:
                 )
             ranked_criteria = self.score_criteria_without_llm(all_criteria)
 
-        sorted_trials = self.aggregate_to_trials(ranked_criteria)
+        sorted_trials = self.aggregate_to_trials(
+            ranked_criteria, threshold=self.second_level_aggregate_score_threshold
+        )
         top_trials = sorted_trials[:top_n]
         logger.info(f"Top {top_n} trials retrieved: {top_trials}")
         if save_path:
