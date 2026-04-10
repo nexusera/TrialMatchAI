@@ -1,7 +1,7 @@
 import math
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Callable, Dict, List, Optional, Set
+from typing import Callable, Dict, List, Optional, Set, Tuple
 
 from Matcher.models.embedding.text_embedder import TextEmbedder
 from Matcher.models.llm.llm_reranker import LLMReranker
@@ -624,7 +624,7 @@ class SecondStageRetriever:
         use_reranker: bool = True,
         save_path: Optional[str] = None,
         missing_criteria_nct_ids_out: Optional[str] = None,
-    ) -> List[Dict]:
+    ) -> Tuple[List[Dict], List[str]]:
         # Cap queries to prevent memory/performance issues
         max_queries = 150  # Reasonable limit for second-level search
         if len(queries) > max_queries:
@@ -655,8 +655,8 @@ class SecondStageRetriever:
                     hit["query"] = query
                     all_criteria.append(hit)
 
+        missing = nct_ids_without_criterion_hits(nct_ids, all_criteria)
         if missing_criteria_nct_ids_out:
-            missing = nct_ids_without_criterion_hits(nct_ids, all_criteria)
             write_text_file(missing, missing_criteria_nct_ids_out)
             logger.info(
                 "Wrote %d NCT id(s) with no criterion documents in this retrieval pass to %s",
@@ -686,5 +686,5 @@ class SecondStageRetriever:
         if save_path:
             write_text_file([trial["nct_id"] for trial in top_trials], save_path)
             logger.info(f"Top trials saved to {save_path}")
-        return top_trials
+        return top_trials, missing
 

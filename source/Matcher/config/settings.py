@@ -94,6 +94,7 @@ class SearchSettings(BaseModel):
         250,
         ge=1,
     )
+    allow_trials_without_criteria_for_cot: bool = False
     explain_first_level_filter_misses: bool = False
 
     @field_validator("second_level_search_mode")

@@ -235,6 +235,22 @@ def _write_second_level_trial_score_artifacts(
     write_text_file(top_lines, f"{output_folder}/top_trials_scored.tsv")
 
 
+def _first_level_nct_key(first_level_scores: Dict[str, Any], nid: Any) -> str:
+    """Resolve the key used in ``first_level_scores`` for this NCT (spacing/case tolerant)."""
+    tid = str(nid).strip()
+    if tid in first_level_scores:
+        return tid
+    upper = tid.upper()
+    for k in first_level_scores:
+        if str(k).strip().upper() == upper:
+            return str(k)
+    return tid
+
+
+def _combined_scores_has_nct_ci(combined_scores: Dict[str, float], nct_upper: str) -> bool:
+    return any(str(k).strip().upper() == nct_upper for k in combined_scores)
+
+
 def run_second_level_search(
     output_folder: str,
     nct_ids: List[str],
@@ -296,7 +312,7 @@ def run_second_level_search(
         queries.extend(synonyms[:3])
 
     top_n = min(len(nct_ids), config["search"].get("max_trials_second_level", 100))
-    second_level_results = gemma_retriever.retrieve_and_rank(
+    second_level_results, nct_without_criteria_hits = gemma_retriever.retrieve_and_rank(
         queries,
         nct_ids,
         top_n=top_n,
@@ -312,6 +328,28 @@ def run_second_level_search(
         except (TypeError, ValueError):
             first_score = 0.0
         combined_scores[trial_id] = first_score + second_score
+
+    allow_no_criteria = bool(
+        config.get("search", {}).get("allow_trials_without_criteria_for_cot", False)
+    )
+    if allow_no_criteria and nct_without_criteria_hits:
+        added = 0
+        for raw_nid in nct_without_criteria_hits:
+            canon = _first_level_nct_key(first_level_scores, raw_nid)
+            if _combined_scores_has_nct_ci(combined_scores, canon.upper()):
+                continue
+            try:
+                fs = float(first_level_scores.get(canon, 0))
+            except (TypeError, ValueError):
+                fs = 0.0
+            combined_scores[canon] = fs
+            added += 1
+        if added:
+            logger.info(
+                "allow_trials_without_criteria_for_cot: merged %d trial(s) with no "
+                "criterion hits into combined ranking (second-level score 0).",
+                added,
+            )
 
     sorted_trials = sorted(combined_scores.items(), key=lambda x: x[1], reverse=True)
     num_top = max(1, min(len(sorted_trials) // 3, top_n))
@@ -700,6 +738,16 @@ examples:
         ),
     )
     search.add_argument(
+        "--allow-trials-without-criteria-for-cot",
+        action="store_true",
+        default=None,
+        help=(
+            "Keep first-stage candidates that had no eligibility/criterion hits in the "
+            "second-level pass: they enter combined ranking with second-level score 0 "
+            "(first-level score only) so CoT/RAG can still assess the trial."
+        ),
+    )
+    search.add_argument(
         "--max-trials-first-level",
         type=int,
         default=None,
@@ -880,6 +928,8 @@ def apply_cli_overrides(config: Dict[str, Any], args: argparse.Namespace) -> Dic
         config["search"]["resume_from_second_level"] = True
     if args.second_level_search_mode is not None:
         config["search"]["second_level_search_mode"] = args.second_level_search_mode
+    if args.allow_trials_without_criteria_for_cot is True:
+        config["search"]["allow_trials_without_criteria_for_cot"] = True
     if args.explain_first_level_filter_misses is True:
         config["search"]["explain_first_level_filter_misses"] = True
 
