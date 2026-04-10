@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, NamedTuple, Optional, Set, Tuple, Union
 
 from dateutil import parser as date_parser
 from Matcher.models.embedding.text_embedder import TextEmbedder
@@ -7,6 +7,7 @@ from Matcher.utils.logging_config import setup_logging
 from Matcher.utils.retry import with_retries
 
 from elasticsearch import BadRequestError, Elasticsearch
+from elasticsearch.helpers import scan
 
 logger = setup_logging(__name__)
 
@@ -103,6 +104,285 @@ _HYBRID_SCRIPT = _SAFE_COSINE + """
     }
     return alpha * normalizedTextScore + beta * combinedVectorScore;
 """
+
+
+class EligibilityFilterBuild(NamedTuple):
+    filters: List[dict]
+    gender_terms: List[str]
+    age_filter_enabled: bool
+    patient_age_for_range: int
+    status_filter_enabled: bool
+    preselected_enabled: bool
+
+
+def build_eligibility_filters(
+    age: Union[int, None, str],
+    sex: str,
+    overall_status: Optional[str],
+    pre_selected_nct_ids: Optional[List[str]],
+) -> EligibilityFilterBuild:
+    """Build the same bool.filter clauses as first-level trial search (age/sex/status/preselect)."""
+    sex_u = (sex or "all").upper()
+    gender_terms = {
+        "MALE": ["MALE", "Male", "male", "M", "All", "all", "ALL"],
+        "FEMALE": ["FEMALE", "Female", "female", "F", "All", "all", "ALL"],
+        "ALL": [
+            "All",
+            "all",
+            "ALL",
+            "Both",
+            "both",
+            "BOTH",
+            "FEMALE",
+            "Female",
+            "female",
+            "F",
+            "MALE",
+            "Male",
+            "male",
+            "M",
+        ],
+    }.get(sex_u, ["All"])
+    filters: List[dict] = []
+    age_filter_enabled = age not in [None, "all", "ALL", "All"]
+    patient_age_int = 0
+    if age_filter_enabled:
+        try:
+            patient_age_int = int(age)  # type: ignore[arg-type]
+        except (TypeError, ValueError):
+            patient_age_int = 0
+        filters.append(
+            {
+                "bool": {
+                    "must": [
+                        {
+                            "bool": {
+                                "should": [
+                                    {"range": {"minimum_age": {"lte": patient_age_int}}},
+                                    {
+                                        "bool": {
+                                            "must_not": {
+                                                "exists": {"field": "minimum_age"}
+                                            }
+                                        }
+                                    },
+                                ]
+                            }
+                        },
+                        {
+                            "bool": {
+                                "should": [
+                                    {"range": {"maximum_age": {"gte": patient_age_int}}},
+                                    {
+                                        "bool": {
+                                            "must_not": {
+                                                "exists": {"field": "maximum_age"}
+                                            }
+                                        }
+                                    },
+                                ]
+                            }
+                        },
+                    ]
+                }
+            }
+        )
+    status_filter_enabled = bool(overall_status and overall_status.lower() != "all")
+    if status_filter_enabled:
+        filters.append({"match": {"overall_status": overall_status}})
+    preselected_enabled = bool(pre_selected_nct_ids)
+    if preselected_enabled:
+        filters.append({"terms": {"nct_id": pre_selected_nct_ids}})
+    if gender_terms:
+        filters.append(
+            {
+                "bool": {
+                    "should": [
+                        {"terms": {"gender": gender_terms}},
+                        {"bool": {"must_not": {"exists": {"field": "gender"}}}},
+                    ]
+                }
+            }
+        )
+    return EligibilityFilterBuild(
+        filters=filters,
+        gender_terms=gender_terms,
+        age_filter_enabled=age_filter_enabled,
+        patient_age_for_range=patient_age_int,
+        status_filter_enabled=status_filter_enabled,
+        preselected_enabled=preselected_enabled,
+    )
+
+
+def _diagnose_trial_filter_miss(
+    src: Dict[str, Any],
+    fb: EligibilityFilterBuild,
+    overall_status_query: Optional[str],
+    pre_selected_ids: Optional[List[str]],
+) -> List[str]:
+    """Best-effort human-readable reasons a trial may fail first-level ES filters."""
+    reasons: List[str] = []
+    if fb.age_filter_enabled:
+        pa = fb.patient_age_for_range
+        mn = src.get("minimum_age")
+        if mn is not None and mn != "":
+            try:
+                mnf = float(mn)
+                if mnf > pa:
+                    reasons.append(
+                        f"年龄下限: 试验 minimum_age={mnf:g} > 用于 filter 的患者年龄 {pa}"
+                    )
+            except (TypeError, ValueError):
+                reasons.append(f"minimum_age 无法解析为数字: {mn!r}")
+        mx = src.get("maximum_age")
+        if mx is not None and mx != "":
+            try:
+                mxf = float(mx)
+                if mxf < pa:
+                    reasons.append(
+                        f"年龄上限: 试验 maximum_age={mxf:g} < 用于 filter 的患者年龄 {pa}"
+                    )
+            except (TypeError, ValueError):
+                reasons.append(f"maximum_age 无法解析为数字: {mx!r}")
+
+    gval = src.get("gender")
+    if gval is not None and str(gval).strip() != "":
+        if str(gval) not in fb.gender_terms:
+            reasons.append(
+                f"性别: 试验 gender={gval!r} 不在当前患者允许集合（与 ES terms 一致）"
+            )
+
+    if fb.status_filter_enabled and overall_status_query:
+        ov = src.get("overall_status")
+        q = str(overall_status_query).strip().lower()
+        ovs = (str(ov).strip().lower() if ov is not None else "")
+        if not ovs:
+            reasons.append("招募状态: 试验缺少 overall_status，难以通过状态 filter")
+        elif q not in ovs and ovs not in q:
+            reasons.append(
+                f"招募状态: 试验 overall_status={ov!r} 与 filter 关键词 {overall_status_query!r} "
+                "（ES match）可能不命中"
+            )
+
+    if fb.preselected_enabled and pre_selected_ids:
+        tid = str(src.get("nct_id") or "")
+        if tid and tid not in set(pre_selected_ids):
+            reasons.append("不在 pre_selected_nct_ids 白名单中")
+
+    if not reasons:
+        reasons.append(
+            "未匹配到明确的年龄/性别/状态/白名单原因（可能与 ES 字段类型、analyzer 或脚本分有关）"
+        )
+    return reasons
+
+
+def explain_first_level_filter_misses(
+    es_client: Elasticsearch,
+    index_name: str,
+    *,
+    fb: EligibilityFilterBuild,
+    retrieved_nct_ids: List[str],
+    max_trials_first_level: int,
+    sex: str,
+    overall_status: Optional[str],
+    pre_selected_nct_ids: Optional[List[str]],
+    patient_age_raw: Any,
+    vector_score_threshold: float,
+) -> Dict[str, Any]:
+    """Compare index vs filter-only pass set vs hybrid top-K; write-oriented payload."""
+    retrieved: Set[str] = {str(x) for x in retrieved_nct_ids if x}
+
+    all_sources: Dict[str, Dict[str, Any]] = {}
+    for hit in scan(
+        es_client,
+        index=index_name,
+        query={"match_all": {}},
+        _source=["nct_id", "minimum_age", "maximum_age", "gender", "overall_status"],
+        size=500,
+    ):
+        src = hit.get("_source") or {}
+        nid = src.get("nct_id")
+        if nid:
+            all_sources[str(nid)] = src
+
+    filter_pass: Set[str] = set()
+    for hit in scan(
+        es_client,
+        index=index_name,
+        query={"bool": {"filter": fb.filters}} if fb.filters else {"match_all": {}},
+        _source=["nct_id"],
+        size=500,
+    ):
+        src = hit.get("_source") or {}
+        nid = src.get("nct_id")
+        if nid:
+            filter_pass.add(str(nid))
+
+    failed_filter_full: List[Dict[str, Any]] = []
+    for nid, src in sorted(all_sources.items()):
+        if nid not in filter_pass:
+            failed_filter_full.append(
+                {
+                    "nct_id": nid,
+                    "reasons": _diagnose_trial_filter_miss(
+                        src, fb, overall_status, pre_selected_nct_ids
+                    ),
+                }
+            )
+    max_failed_list = 5000
+    failed_truncated = len(failed_filter_full) > max_failed_list
+    failed_filter = failed_filter_full[:max_failed_list]
+
+    passed_not_in_topk_sorted = sorted(filter_pass - retrieved)
+    max_list = 2000
+    passed_slice = passed_not_in_topk_sorted[:max_list]
+    truncated = len(passed_not_in_topk_sorted) > max_list
+    in_topk = sorted(retrieved)
+
+    return {
+        "index": index_name,
+        "patient_age_raw": patient_age_raw,
+        "patient_sex": sex,
+        "overall_status_filter": overall_status,
+        "vector_score_threshold": vector_score_threshold,
+        "max_trials_first_level": max_trials_first_level,
+        "counts": {
+            "docs_in_index": len(all_sources),
+            "passed_eligibility_filters": len(filter_pass),
+            "retrieved_first_level": len(retrieved),
+            "failed_eligibility_filters": len(failed_filter_full),
+            "passed_filters_but_not_in_topk": len(passed_not_in_topk_sorted),
+        },
+        "filter_flags": {
+            "age_filter_enabled": fb.age_filter_enabled,
+            "patient_age_used_in_filter": fb.patient_age_for_range,
+            "status_filter_enabled": fb.status_filter_enabled,
+            "preselected_enabled": fb.preselected_enabled,
+        },
+        "note": (
+            "passed_filters_but_not_in_topk: 已通过年龄/性别/状态等 filter，"
+            "但未进入一级 hybrid/bm25 返回的前 max_trials_first_level 条（排序/截断）。"
+        ),
+        "failed_eligibility_filters_truncated": failed_truncated,
+        "failed_eligibility_filters_omitted": (
+            len(failed_filter_full) - max_failed_list if failed_truncated else 0
+        ),
+        "failed_eligibility_filters": failed_filter,
+        "passed_filters_but_not_in_topk_truncated": truncated,
+        "passed_filters_but_not_in_topk_omitted": (
+            len(passed_not_in_topk_sorted) - max_list if truncated else 0
+        ),
+        "passed_filters_but_not_in_topk": [
+            {
+                "nct_id": nid,
+                "reasons": [
+                    f"已通过 filter，但未进入一级检索前 {max_trials_first_level} 名（hybrid 综合分排序）"
+                ],
+            }
+            for nid in passed_slice
+        ],
+        "retrieved_nct_ids_in_order": in_topk,
+    }
 
 
 class ClinicalTrialSearch:
@@ -227,80 +507,10 @@ class ClinicalTrialSearch:
         other_conditions: Optional[List[str]] = None,
         search_mode: str = "hybrid",
     ) -> Dict:
-        sex = sex.upper()
-        gender_terms = {
-            "MALE": ["MALE", "Male", "male", "M", "All", "all", "ALL"],
-            "FEMALE": ["FEMALE", "Female", "female", "F", "All", "all", "ALL"],
-            "ALL": [
-                "All",
-                "all",
-                "ALL",
-                "Both",
-                "both",
-                "BOTH",
-                "FEMALE",
-                "Female",
-                "female",
-                "F",
-                "MALE",
-                "Male",
-                "male",
-                "M",
-            ],
-        }.get(sex, ["All"])
-        filters = []
-        if age not in [None, "all", "ALL", "All"]:
-            filters.append(
-                {
-                    "bool": {
-                        "must": [
-                            {
-                                "bool": {
-                                    "should": [
-                                        {"range": {"minimum_age": {"lte": age}}},
-                                        {
-                                            "bool": {
-                                                "must_not": {
-                                                    "exists": {"field": "minimum_age"}
-                                                }
-                                            }
-                                        },
-                                    ]
-                                }
-                            },
-                            {
-                                "bool": {
-                                    "should": [
-                                        {"range": {"maximum_age": {"gte": age}}},
-                                        {
-                                            "bool": {
-                                                "must_not": {
-                                                    "exists": {"field": "maximum_age"}
-                                                }
-                                            }
-                                        },
-                                    ]
-                                }
-                            },
-                        ]
-                    }
-                }
-            )
-        if overall_status and overall_status.lower() != "all":
-            filters.append({"match": {"overall_status": overall_status}})
-        if pre_selected_nct_ids:
-            filters.append({"terms": {"nct_id": pre_selected_nct_ids}})
-        if gender_terms:
-            filters.append(
-                {
-                    "bool": {
-                        "should": [
-                            {"terms": {"gender": gender_terms}},
-                            {"bool": {"must_not": {"exists": {"field": "gender"}}}},
-                        ]
-                    }
-                }
-            )
+        fb = build_eligibility_filters(
+            age, sex, overall_status, pre_selected_nct_ids
+        )
+        filters = fb.filters
 
         # Cap conditions to prevent too many ES clauses (each condition creates 2 clauses)
         # ES default maxClauseCount is 1024, leaving room for filters and other clauses

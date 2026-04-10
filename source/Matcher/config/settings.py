@@ -89,6 +89,7 @@ class SearchSettings(BaseModel):
     skip_first_level: bool = False
     resume_from_second_level: bool = False
     second_level_search_mode: str = "hybrid"
+    explain_first_level_filter_misses: bool = False
 
     @field_validator("second_level_search_mode")
     @classmethod

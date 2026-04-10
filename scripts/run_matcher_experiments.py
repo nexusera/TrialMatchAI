@@ -167,6 +167,14 @@ def _parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--explain-first-level-filter-misses",
+        action="store_true",
+        help=(
+            "Forward --explain-first-level-filter-misses to Matcher.main "
+            "(writes first_level_filter_explain.json per patient)."
+        ),
+    )
+    parser.add_argument(
         "--max-trials-rag",
         type=int,
         default=1000,
@@ -408,6 +416,8 @@ def _build_command(
         "--max-trials-rag",
         str(args.max_trials_rag),
     ]
+    if args.explain_first_level_filter_misses:
+        cmd.append("--explain-first-level-filter-misses")
     if experiment.skip_first_level:
         cmd.append("--skip-first-level")
     if experiment.second_level_search_mode:

@@ -25,7 +25,11 @@ from Matcher.pipeline.trial_ranker import (
     rank_trials,
     save_ranked_trials,
 )
-from Matcher.pipeline.trial_search.first_level_search import ClinicalTrialSearch
+from Matcher.pipeline.trial_search.first_level_search import (
+    ClinicalTrialSearch,
+    build_eligibility_filters,
+    explain_first_level_filter_misses,
+)
 from Matcher.pipeline.trial_search.second_level_search import SecondStageRetriever
 from Matcher.services.biomedner_service import initialize_biomedner_services
 from Matcher.services.elasticsearch_service import ensure_elasticsearch
@@ -83,6 +87,8 @@ def run_first_level_search(
     embedder: TextEmbedder,
     config: Dict,
     es_client: Elasticsearch,
+    *,
+    explain_filter_misses: bool = False,
 ) -> Optional[Tuple]:
     main_conditions = keywords.get("main_conditions", [])
     other_conditions = keywords.get("other_conditions", [])
@@ -93,7 +99,7 @@ def run_first_level_search(
         return None
 
     condition = main_conditions[0]
-    age = patient_info.get("age", "all")
+    age_input = patient_info.get("age", "all")
     sex = patient_info.get("gender", "all")
     overall_status = "All"
 
@@ -103,10 +109,19 @@ def run_first_level_search(
     synonyms = cts.get_synonyms(condition.lower().strip())
     main_conditions.extend(synonyms[:5])
 
+    if age_input not in ["all", "ALL", "All"]:
+        _parsed_age = cts.parse_age_input(age_input)
+        if _parsed_age is None:
+            logger.error("Could not parse patient age for first-level search: %r", age_input)
+            return None
+        age_for_query = _parsed_age
+    else:
+        age_for_query = 0
+
     search_size = config["search"].get("max_trials_first_level", 300)
     trials, scores = cts.search_trials(
         condition=condition,
-        age_input=age,
+        age_input=age_input,
         sex=sex,
         overall_status=overall_status,
         size=search_size,
@@ -131,6 +146,28 @@ def run_first_level_search(
         if nid in first_level_scores
     ]
     write_text_file(ranked_lines, f"{output_folder}/first_level_ranked.tsv")
+
+    if explain_filter_misses:
+        fb = build_eligibility_filters(
+            age_for_query, sex, overall_status, None
+        )
+        explain_path = f"{output_folder}/first_level_filter_explain.json"
+        payload = explain_first_level_filter_misses(
+            es_client,
+            index_name,
+            fb=fb,
+            retrieved_nct_ids=[str(x) for x in nct_ids if x],
+            max_trials_first_level=search_size,
+            sex=sex,
+            overall_status=overall_status,
+            pre_selected_nct_ids=None,
+            patient_age_raw=age_input,
+            vector_score_threshold=float(
+                config.get("search", {}).get("vector_score_threshold", 0.5)
+            ),
+        )
+        write_json_file(payload, explain_path)
+        logger.info("First-level filter explain written: %s", explain_path)
 
     logger.info(
         f"First-level search complete: {len(nct_ids)} trial IDs saved "
@@ -668,6 +705,16 @@ examples:
             "candidate trials."
         ),
     )
+    search.add_argument(
+        "--explain-first-level-filter-misses",
+        action="store_true",
+        default=None,
+        help=(
+            "After first-level search, write first_level_filter_explain.json: "
+            "per-trial reasons for failing age/gender/status filters vs "
+            "passed-filters-but-not-in-top-K (ranking cutoff)."
+        ),
+    )
 
     # ── Elasticsearch ──
     es = parser.add_argument_group("Elasticsearch")
@@ -794,6 +841,8 @@ def apply_cli_overrides(config: Dict[str, Any], args: argparse.Namespace) -> Dic
         config["search"]["resume_from_second_level"] = True
     if args.second_level_search_mode is not None:
         config["search"]["second_level_search_mode"] = args.second_level_search_mode
+    if args.explain_first_level_filter_misses is True:
+        config["search"]["explain_first_level_filter_misses"] = True
 
     # ── Elasticsearch ──
     if args.es_host is not None:
@@ -1022,6 +1071,9 @@ def main_pipeline(config: Dict[str, Any]):
                             embedder,
                             config,
                             es_client,
+                            explain_filter_misses=config["search"].get(
+                                "explain_first_level_filter_misses", False
+                            ),
                         )
                 if not result:
                     logger.error("First-level search failed for %s", patient_id)
