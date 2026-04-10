@@ -87,6 +87,7 @@ class SearchSettings(BaseModel):
     second_level_aggregate_score_threshold: float = Field(0.5, ge=0.0, le=1.0)
     max_trials_first_level: int = Field(300, ge=1)
     max_trials_second_level: int = Field(100, ge=1)
+    second_level_top_trials_ratio: float = Field(1.0 / 3.0, ge=0.0, le=1.0)
     skip_first_level: bool = False
     resume_from_second_level: bool = False
     second_level_search_mode: str = "hybrid"

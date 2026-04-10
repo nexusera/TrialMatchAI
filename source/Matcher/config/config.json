@@ -70,6 +70,7 @@
     "second_level_aggregate_score_threshold": 0.5,
     "max_trials_first_level": 300,
     "max_trials_second_level": 100,
+    "second_level_top_trials_ratio": 0.3333333333333333,
     "skip_first_level": false,
     "resume_from_second_level": false,
     "second_level_search_mode": "hybrid",

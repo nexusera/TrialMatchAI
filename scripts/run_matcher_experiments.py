@@ -181,6 +181,15 @@ def _parse_args() -> argparse.Namespace:
         help="Maximum trials sent into RAG.",
     )
     parser.add_argument(
+        "--second-level-top-trials-ratio",
+        type=float,
+        default=None,
+        help=(
+            "Forwarded to Matcher.main as --second-level-top-trials-ratio when set; "
+            "otherwise Matcher uses config.json default (1/3)."
+        ),
+    )
+    parser.add_argument(
         "--artifact-source-dir",
         default="",
         help=(
@@ -416,6 +425,13 @@ def _build_command(
         "--max-trials-rag",
         str(args.max_trials_rag),
     ]
+    if args.second_level_top_trials_ratio is not None:
+        cmd.extend(
+            [
+                "--second-level-top-trials-ratio",
+                str(args.second_level_top_trials_ratio),
+            ]
+        )
     if args.explain_first_level_filter_misses:
         cmd.append("--explain-first-level-filter-misses")
     if experiment.skip_first_level:

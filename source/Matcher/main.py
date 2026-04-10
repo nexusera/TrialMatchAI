@@ -352,8 +352,31 @@ def run_second_level_search(
             )
 
     sorted_trials = sorted(combined_scores.items(), key=lambda x: x[1], reverse=True)
-    num_top = max(1, min(len(sorted_trials) // 3, top_n))
+    n_sorted = len(sorted_trials)
+    ratio = float(
+        config.get("search", {}).get("second_level_top_trials_ratio", 1.0 / 3.0)
+    )
+    ratio = max(0.0, min(1.0, ratio))
+    if n_sorted == 0:
+        num_top = 0
+    elif ratio <= 0.0:
+        num_top = 0
+    elif ratio >= 1.0:
+        num_top = min(n_sorted, top_n)
+    else:
+        take_n = int(n_sorted * ratio)
+        # Legacy: if the fraction rounds down to 0 but candidates exist, keep one.
+        take_n = max(take_n, 1)
+        num_top = min(take_n, top_n)
     semi_final_trials = sorted_trials[:num_top]
+    logger.info(
+        "top_trials.txt selection: second_level_top_trials_ratio=%.6f n_sorted=%d "
+        "top_n_cap=%d -> num_top=%d",
+        ratio,
+        n_sorted,
+        top_n,
+        num_top,
+    )
     selected_ids = {trial_id for trial_id, _ in semi_final_trials}
 
     rank_second_level = {
@@ -760,6 +783,17 @@ examples:
         help="Max trials returned by second-level search (default: 100)",
     )
     search.add_argument(
+        "--second-level-top-trials-ratio",
+        type=float,
+        default=None,
+        help=(
+            "After second-level combined ranking, write the top "
+            "floor(n_candidates * ratio) trial IDs to top_trials.txt (capped by "
+            "--max-trials-second-level). Use 1.0 for all ranked candidates up to that cap. "
+            "Default: 1/3 (legacy behavior)."
+        ),
+    )
+    search.add_argument(
         "--skip-first-level",
         action="store_true",
         default=None,
@@ -922,6 +956,10 @@ def apply_cli_overrides(config: Dict[str, Any], args: argparse.Namespace) -> Dic
         config["search"]["max_trials_first_level"] = args.max_trials_first_level
     if args.max_trials_second_level is not None:
         config["search"]["max_trials_second_level"] = args.max_trials_second_level
+    if args.second_level_top_trials_ratio is not None:
+        config["search"]["second_level_top_trials_ratio"] = (
+            args.second_level_top_trials_ratio
+        )
     if args.skip_first_level is True:
         config["search"]["skip_first_level"] = True
     if args.resume_from_second_level is True:
