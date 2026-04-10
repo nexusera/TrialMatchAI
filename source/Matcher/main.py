@@ -246,12 +246,14 @@ def run_second_level_search(
     config: Dict,
 ) -> Tuple:
     top_trials_path = f"{output_folder}/top_trials.txt"
+    missing_criteria_out = f"{output_folder}/nct_ids_no_criteria_hits.txt"
     second_level_mode = config.get("search", {}).get(
         "second_level_search_mode", "hybrid"
     )
     if not nct_ids:
         logger.warning("No candidate trial IDs available; skipping second-level search.")
         write_text_file([], top_trials_path)
+        write_text_file([], missing_criteria_out)
         _write_second_level_trial_score_artifacts(
             output_folder,
             second_level_mode,
@@ -265,6 +267,10 @@ def run_second_level_search(
     if not queries:
         logger.warning("No search queries available; skipping second-level search.")
         write_text_file([], top_trials_path)
+        write_text_file(
+            [str(x).strip() for x in nct_ids if str(x).strip()],
+            missing_criteria_out,
+        )
         _write_second_level_trial_score_artifacts(
             output_folder,
             second_level_mode,
@@ -291,7 +297,10 @@ def run_second_level_search(
 
     top_n = min(len(nct_ids), config["search"].get("max_trials_second_level", 100))
     second_level_results = gemma_retriever.retrieve_and_rank(
-        queries, nct_ids, top_n=top_n
+        queries,
+        nct_ids,
+        top_n=top_n,
+        missing_criteria_nct_ids_out=missing_criteria_out,
     )
 
     combined_scores: Dict[str, float] = {}

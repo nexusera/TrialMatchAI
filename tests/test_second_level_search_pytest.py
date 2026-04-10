@@ -1,4 +1,7 @@
-from Matcher.pipeline.trial_search.second_level_search import SecondStageRetriever
+from Matcher.pipeline.trial_search.second_level_search import (
+    SecondStageRetriever,
+    nct_ids_without_criterion_hits,
+)
 
 
 class DummyES:
@@ -22,6 +25,16 @@ def test_score_criteria_without_llm_weights():
     scored = retriever.score_criteria_without_llm(criteria)
     assert scored[0]["llm_score"] == 1.0
     assert scored[1]["llm_score"] == 0.125
+
+
+def test_nct_ids_without_criterion_hits():
+    candidates = ["NCT0001", "NCT0002", "nct0003"]
+    criteria = [
+        {"_source": {"nct_id": "NCT0001"}},
+        {"_source": {"nct_id": "nct0003"}},
+    ]
+    missing = nct_ids_without_criterion_hits(candidates, criteria)
+    assert missing == ["NCT0002"]
 
 
 def test_aggregate_to_trials_weighted():

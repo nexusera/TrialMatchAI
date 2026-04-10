@@ -1,7 +1,7 @@
 import math
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Callable, Dict, List, Optional
+from typing import Callable, Dict, List, Optional, Set
 
 from Matcher.models.embedding.text_embedder import TextEmbedder
 from Matcher.models.llm.llm_reranker import LLMReranker
@@ -34,6 +34,32 @@ def _nct_id_filter_clause(nct_ids: List[str]) -> Dict:
 def _merge_hits_by_score(hits: List[Dict], size: int) -> List[Dict]:
     hits.sort(key=lambda h: float(h.get("_score", 0.0)), reverse=True)
     return hits[:size]
+
+
+def nct_ids_without_criterion_hits(
+    candidate_nct_ids: List[str], all_criteria: List[Dict]
+) -> List[str]:
+    """NCT IDs from the candidate list that never appear on any criterion hit."""
+    seen: Set[str] = set()
+    for hit in all_criteria:
+        src = hit.get("_source")
+        if not isinstance(src, dict):
+            continue
+        nid = src.get("nct_id")
+        if nid is None:
+            continue
+        key = str(nid).strip().upper()
+        if key:
+            seen.add(key)
+    missing: List[str] = []
+    missing_keys: Set[str] = set()
+    for nid in candidate_nct_ids:
+        key = str(nid).strip().upper()
+        if not key or key in seen or key in missing_keys:
+            continue
+        missing_keys.add(key)
+        missing.append(str(nid).strip())
+    return missing
 
 
 class SecondStageRetriever:
@@ -515,6 +541,7 @@ class SecondStageRetriever:
         top_n: int,
         use_reranker: bool = True,
         save_path: Optional[str] = None,
+        missing_criteria_nct_ids_out: Optional[str] = None,
     ) -> List[Dict]:
         # Cap queries to prevent memory/performance issues
         max_queries = 150  # Reasonable limit for second-level search
@@ -545,6 +572,15 @@ class SecondStageRetriever:
                 for hit in hits:
                     hit["query"] = query
                     all_criteria.append(hit)
+
+        if missing_criteria_nct_ids_out:
+            missing = nct_ids_without_criterion_hits(nct_ids, all_criteria)
+            write_text_file(missing, missing_criteria_nct_ids_out)
+            logger.info(
+                "Wrote %d NCT id(s) with no criterion documents in this retrieval pass to %s",
+                len(missing),
+                missing_criteria_nct_ids_out,
+            )
 
         # Check if reranker is available before trying to use it
         if use_reranker and self.llm_reranker is not None:
