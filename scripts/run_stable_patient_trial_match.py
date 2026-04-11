@@ -3,8 +3,9 @@
 Run match_patients_trials_qwen.py against an OpenAI-compatible server on a chosen port.
 
 - Default patient directory: example/ (resolved under --cwd, default: repo root).
-- Pass specific patient JSON files with repeated --patient (relative to --patients-dir or absolute).
+- Pass patients with --patients f1.json f2.json and/or repeated --patient (paths relative to --patients-dir or absolute).
 - Trials path: file or directory (--trials), also resolved under --cwd when relative.
+- Result directory: --output-dir or --results-dir (relative to --cwd); passed through to the matcher.
 - On non-zero exit, optionally re-invokes the matcher; the matcher resumes from partial JSON on disk.
 
 Unknown CLI tokens are forwarded to match_patients_trials_qwen.py (place them after a lone '--'
@@ -127,11 +128,12 @@ def main() -> int:
         epilog=(
             "Extra flags (e.g. --model NAME, --timeout 300, --use-cot-reasoning) are passed "
             "through to match_patients_trials_qwen.py. Put them after a lone `--` if needed.\n\n"
-            "Relative paths for --trials, --patients-dir, and --output-dir are resolved against "
+            "Relative paths for --trials, --patients-dir, --output-dir/--results-dir are resolved against "
             "--cwd (default: repository root), not the shell's current directory.\n\n"
             "Example:\n"
             "  %(prog)s --port 9220 --trials data/custom/processed_cancer_trials \\\n"
-            "    --patient covid19.json --patient phenopacket.json \\\n"
+            "    --results-dir results/my_run \\\n"
+            "    --patients covid19.json phenopacket.json mcahs1.json \\\n"
             "    -- --model my-model --save-every 1"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -154,13 +156,24 @@ def main() -> int:
         help="Directory containing patient JSON files (default: example).",
     )
     parser.add_argument(
+        "--patients",
+        nargs="+",
+        default=None,
+        metavar="NAME",
+        help=(
+            "One or more patient JSON files in a single flag (basename relative to "
+            "--patients-dir, or absolute path each). Combine with --patient if you like."
+        ),
+    )
+    parser.add_argument(
         "--patient",
         action="append",
         default=[],
         metavar="NAME",
         help=(
-            "Patient JSON file: basename relative to --patients-dir, or absolute path. "
-            "Repeat for multiple patients. If omitted, all *.json under --patients-dir are used."
+            "Single patient JSON file; repeat the flag for multiple. "
+            "Same path rules as --patients. If neither --patients nor --patient is set, "
+            "all *.json under --patients-dir are used."
         ),
     )
     parser.add_argument(
@@ -171,9 +184,15 @@ def main() -> int:
     )
     parser.add_argument(
         "--output-dir",
+        "--results-dir",
         type=Path,
+        dest="output_dir",
+        metavar="DIR",
         default=Path("results/qwen_patient_trial_matches"),
-        help="Output directory for per-patient results (default: results/qwen_patient_trial_matches).",
+        help=(
+            "Directory for per-patient match JSON (same as --results-dir). "
+            "Relative to --cwd. Default: results/qwen_patient_trial_matches."
+        ),
     )
     parser.add_argument(
         "--cwd",
@@ -216,6 +235,10 @@ def main() -> int:
     if forward and forward[0] == "--":
         forward = forward[1:]
 
+    patient_specs: List[str] = [
+        str(p) for p in (args.patients or [])
+    ] + list(args.patient)
+
     if not MATCHER.is_file():
         print(f"Matcher script not found: {MATCHER}", file=sys.stderr)
         return 2
@@ -230,8 +253,8 @@ def main() -> int:
         patients_dir = _resolve_under_cwd(args.patients_dir, cwd)
         output_dir = _resolve_under_cwd(args.output_dir, cwd)
 
-        if args.patient:
-            patient_paths = _resolve_patient_files(patients_dir, args.patient)
+        if patient_specs:
+            patient_paths = _resolve_patient_files(patients_dir, patient_specs)
             patients_path = _prepare_patient_staging(output_dir, patient_paths)
         else:
             if not patients_dir.is_dir():
