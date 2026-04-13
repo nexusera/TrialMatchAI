@@ -24,8 +24,10 @@ from pathlib import Path
 from typing import List, Sequence
 
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
-MATCHER = Path(__file__).resolve().parent / "match_patients_trials_qwen.py"
+# This file lives at scripts/run_pred/ — repo root is two levels up.
+REPO_ROOT = Path(__file__).resolve().parents[2]
+_SCRIPTS_DIR = Path(__file__).resolve().parents[1]
+MATCHER = _SCRIPTS_DIR / "evaluation" / "match_patients_trials_qwen.py"
 
 
 def _resolve_under_cwd(path: Path, cwd: Path) -> Path:

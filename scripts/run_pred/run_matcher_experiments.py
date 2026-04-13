@@ -28,7 +28,8 @@ from pathlib import Path
 from typing import Dict, List, Optional, Sequence
 
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+# This file lives at scripts/run_pred/ — repo root is two levels up.
+REPO_ROOT = Path(__file__).resolve().parents[2]
 SOURCE_DIR = REPO_ROOT / "source"
 DEFAULT_RESULTS_ROOT = REPO_ROOT / "results"
 DEFAULT_PATIENTS_DIR = REPO_ROOT / "example_raw"

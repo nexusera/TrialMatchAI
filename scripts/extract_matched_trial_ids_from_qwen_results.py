@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Extract matched trial IDs from match_patients_trials_qwen.py JSON outputs.
+"""Extract matched trial IDs from scripts/evaluation/match_patients_trials_qwen.py JSON outputs.
 
 Each result file is typically ``<patient_id>.json`` with ``matched_trials`` (already
 score-filtered at save time) and optional ``all_assessments``.

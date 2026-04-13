@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Extract trial IDs processed by scripts/match_patients_trials_qwen.py.
+"""Extract trial IDs processed by scripts/evaluation/match_patients_trials_qwen.py.
 
 By default, this script reads all JSON files in `results/qwen_patient_trial_matches`,
 collects `trial_id` values from `all_assessments`, de-duplicates them, and writes one

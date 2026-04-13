@@ -264,51 +264,69 @@ def _extract_patient_aliases(gt_obj: Dict[str, Any]) -> Set[str]:
     return aliases
 
 
+def _records_from_gt_json(path: Path) -> List[Dict[str, Any]]:
+    data = _load_json(path)
+    if isinstance(data, dict):
+        return [data]
+    if isinstance(data, list):
+        return [obj for obj in data if isinstance(obj, dict)]
+    raise ValueError(f"Unsupported ground-truth JSON shape in: {path}")
+
+
 def _iter_gt_records(source: Path) -> Iterable[Dict[str, Any]]:
     if source.is_file():
-        data = _load_json(source)
-        if isinstance(data, dict):
-            yield data
-            return
-        if isinstance(data, list):
-            for obj in data:
-                if isinstance(obj, dict):
-                    yield obj
-            return
-        raise ValueError(f"Unsupported ground-truth JSON shape in: {source}")
+        yield from _records_from_gt_json(source)
+        return
 
     if source.is_dir():
         for path in sorted(source.rglob("*.json")):
-            data = _load_json(path)
-            if isinstance(data, dict):
-                yield data
-            elif isinstance(data, list):
-                for obj in data:
-                    if isinstance(obj, dict):
-                        yield obj
+            yield from _records_from_gt_json(path)
         return
 
     raise FileNotFoundError(f"Ground truth path not found: {source}")
 
 
-def load_ground_truth(source: Path) -> List[PatientGroundTruth]:
+def load_ground_truth(
+    source: Path, *, recursive_directory: bool = True
+) -> List[PatientGroundTruth]:
     patients: List[PatientGroundTruth] = []
-    for rec in _iter_gt_records(source):
-        rel = _extract_gt_relevant_ids(rec)
-        aliases = _extract_patient_aliases(rec)
-        patient_id = _normalize_text(rec.get("patient_id") or rec.get("id"))
-        if not patient_id and aliases:
-            # Prefer a stable alias if patient_id is missing.
-            patient_id = sorted(aliases)[0]
-        if not patient_id:
-            continue
-        patients.append(
-            PatientGroundTruth(
-                patient_id=patient_id,
-                aliases=aliases | {patient_id, patient_id.lower()},
-                relevant_trial_ids=rel,
-            )
+    if source.is_file():
+        paths = [source]
+    elif source.is_dir():
+        paths = sorted(
+            source.rglob("*.json") if recursive_directory else source.glob("*.json")
         )
+    else:
+        raise FileNotFoundError(f"Ground truth path not found: {source}")
+
+    for path in paths:
+        records = _records_from_gt_json(path)
+        file_aliases: Set[str] = set()
+        if len(records) == 1:
+            file_aliases.update(
+                {
+                    path.name,
+                    path.name.lower(),
+                    path.stem,
+                    path.stem.lower(),
+                }
+            )
+        for rec in records:
+            rel = _extract_gt_relevant_ids(rec)
+            aliases = _extract_patient_aliases(rec) | file_aliases
+            patient_id = _normalize_text(rec.get("patient_id") or rec.get("id"))
+            if not patient_id and aliases:
+                # Prefer a stable alias if patient_id is missing.
+                patient_id = sorted(aliases)[0]
+            if not patient_id:
+                continue
+            patients.append(
+                PatientGroundTruth(
+                    patient_id=patient_id,
+                    aliases=aliases | {patient_id, patient_id.lower()},
+                    relevant_trial_ids=rel,
+                )
+            )
     return patients
 
 

@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 """Shrink Qwen match result JSONs while keeping the same schema as the matcher.
 
-Each input file (from scripts/match_patients_trials_qwen.py) keeps keys such as
+Each input file (from scripts/evaluation/match_patients_trials_qwen.py) keeps keys such as
 patient_id, patient_file, trials_evaluated, trials_assessed, complete,
 matched_trial_count, matched_trials, and all_assessments — only the number of
 trials in all_assessments is reduced (up to N matched + M unmatched per file),
 in the same order as in the original all_assessments.
 
 Example:
-  python scripts/subset_qwen_match_results.py \\
+  python scripts/gt_generation/subset_qwen_match_result.py \\
     --n-matched 30 --n-unmatched 30 \\
     --output-dir results/qwen_patient_trial_matches_subset
 
-  python scripts/subset_qwen_match_results.py \\
+  python scripts/gt_generation/subset_qwen_match_result.py \\
     results/qwen_patient_trial_matches/patient-001.json \\
     -o results/patient-001_subset.json
 """

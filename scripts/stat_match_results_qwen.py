@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Summarize result JSONs produced by scripts/match_patients_trials_qwen.py.
+"""Summarize result JSONs produced by scripts/evaluation/match_patients_trials_qwen.py.
 
 Usage:
     python scripts/stat_match_results_qwen.py

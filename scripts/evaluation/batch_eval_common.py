@@ -16,7 +16,8 @@ from evaluate_ranked_trials import (
     load_predictions_above_score,
 )
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+# This file lives at scripts/evaluation/ — repo root is two levels up.
+REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_GT_BASE = REPO_ROOT / "scripts" / "results"
 DEFAULT_PRED_BASE = REPO_ROOT / "results"
 DEFAULT_PRED_FILE = "ranked_trials.json"
