@@ -637,8 +637,14 @@ def _extract_first_balanced_json_object(text: str) -> Optional[str]:
     return None
 
 
-def extract_json_block(text: str) -> Dict[str, Any]:
+def extract_json_block(text: Optional[str]) -> Dict[str, Any]:
+    if text is None:
+        text = ""
+    elif not isinstance(text, str):
+        text = str(text)
     text = text.strip()
+    if not text:
+        raise ValueError("Model returned empty message content (no JSON to parse).")
     text = re.sub(r"^```(?:json)?\s*", "", text)
     text = re.sub(r"\s*```$", "", text)
     try:
@@ -974,7 +980,11 @@ class OpenAICompatClient:
         payload = self._with_timeout_hints(payload)
         try:
             data = self._post(chat_url, payload)
-            content = data["choices"][0]["message"]["content"]
+            choice0 = data.get("choices") or []
+            if not choice0:
+                raise ValueError("chat/completions response has no choices")
+            msg = choice0[0].get("message") or {}
+            content = msg.get("content")
             return extract_json_block(content)
         except urllib.error.HTTPError as exc:
             # Fallback for providers that only expose `/completions`.
@@ -996,7 +1006,8 @@ class OpenAICompatClient:
         }
         payload = self._with_timeout_hints(payload)
         data = self._post(completion_url, payload)
-        text = data["choices"][0].get("text", "")
+        c0 = (data.get("choices") or [{}])[0]
+        text = c0.get("text") or ""
         return extract_json_block(text)
 
 
